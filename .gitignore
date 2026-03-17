@@ -1,0 +1,111 @@
+# ============================================================
+# 1. DATOS CRUDOS Y DERIVADOS (CRÍTICO)
+# ============================================================
+
+# Todo lo que esté dentro de DATA
+DATA/
+
+# (si en algún momento quieres versionar metadata dentro de DATA, se puede revertir selectivamente)
+
+
+# ============================================================
+# 2. ARCHIVOS DE DATOS (cualquier ubicación)
+# ============================================================
+
+# Tabulares
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.ods
+
+# Bases serializadas
+*.rds
+*.rda
+*.RData
+*.parquet
+*.feather
+
+# JSON (puede contener data sensible)
+*.json
+
+
+# ============================================================
+# 3. DOCUMENTOS Y REPORTES (NO VERSIONAR OUTPUTS)
+# ============================================================
+
+*.pdf
+*.docx
+*.doc
+*.pptx
+*.ppt
+*.pptm
+*.html
+
+# Carpetas de render de Quarto / RMarkdown
+*_files/
+.quarto/
+
+
+# ============================================================
+# 4. LOGS Y OUTPUTS INTERMEDIOS
+# ============================================================
+
+*.log
+*.tmp
+*.bak
+*.out
+
+
+# ============================================================
+# 5. R / RSTUDIO
+# ============================================================
+
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+
+
+# ============================================================
+# 6. SISTEMA OPERATIVO
+# ============================================================
+
+.DS_Store
+Thumbs.db
+
+
+# ============================================================
+# 7. EXCEPCIONES IMPORTANTES (MANTENER VERSIONADAS)
+# ============================================================
+
+# Scripts
+!SCRIPTS/
+
+# Configuración de proyecto
+!*.Rproj
+!.gitignore
+
+# Documentación estructural (sin datos sensibles)
+!*.md
+!*.txt
+
+# REPORTS SOLO SI QUIERES VERSIONAR METADATA (OPCIONAL)
+# (puedes comentar esto si prefieres excluir todo REPORTS)
+!REPORTS/
+REPORTS/*.csv
+REPORTS/*.json
+REPORTS/*.pdf
+REPORTS/*.html
+REPORTS/*_files/
+
+# Mantener solo markdowns de reporte
+!REPORTS/*.md
+!REPORTS/METADATA/
+!REPORTS/METADATA/*.md
+
+# ============================================================
+# 8. OTROS ESPECIALES
+# ============================================================
+tree_project.txt
+arbol-estructura.R
