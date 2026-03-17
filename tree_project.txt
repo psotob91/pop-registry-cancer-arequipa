@@ -1,0 +1,161 @@
+PROJECT ROOT: C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa
+
+└─ arbol-estructura.R
+└─ DATA/
+  └─ DERIVED/
+    └─ METADATA/
+      └─ MASTER_DATA_DICTIONARY.csv
+      └─ MASTER_VARIABLE_MAP.csv
+    └─ rcpa_arequipa_2015_2022_clean.rds
+    └─ rcpa_arequipa_2015_2022_harmonized_long.rds
+    └─ rcpa_arequipa_2015_2022_harmonized_wide.rds
+    └─ rcpa_harmonized_long.rds
+    └─ rcpa_raw_exact.rds
+    └─ rcpa_raw_tagged.rds
+  └─ RAW/
+    └─ RCBPAQP 2015-2022.xlsx
+    └─ RCBPAQP 2015-2022_original.xlsx
+    └─ RCBPAQP 2015-2022_preprop.xlsx
+    └─ SHARED/
+      └─ 9.- Principales_Indicadores_AREQUIPA_INEI.XLS
+      └─ Base del Diagnóstico RCBPA.docx
+      └─ Compendio Estadístico, Arequipa 2022.pdf
+      └─ Estado Actual del Cáncer en Arequipa 07-2024.pptm
+      └─ RCBPA 2002-2003/
+        └─ Mortalidad 2002-2003 RCBPA.pdf
+        └─ RCBPA 2002-2003_Incidencia-Mortalidad.pdf
+      └─ RCBPA 2004-2007/
+        └─ 0. RCBPA 2004-2007_Índice.pdf
+        └─ 1. RCBPA 2004-2007_Presentación.pdf
+        └─ 10. RCBPA 2004-2007_Ca. Otras Localidades.pdf
+        └─ 11. RCBPA 2004-2007_Referencias bibliográficas.pdf
+        └─ 12. RCBPA 2004-2007_Anexos.pdf
+        └─ 2. RCBPA 2004-2007_Introducción.pdf
+        └─ 3. RCBPA 2004-2007_Metodología-Unid. Geog. Funcional.pdf
+        └─ 4. RCBPA 2004-2007_Metodología-Procedimientos.pdf
+        └─ 5. RCBPA 2004-2007_Epidem-Incidencia.pdf
+        └─ 6. RCBPA 2004-2007_Epidem-Mortalidad.pdf
+        └─ 7. RCBPA 2004-2007_Epidem-Localizac. Frec..pdf
+        └─ 8. RCBPA 2004-2007_Indicadores de Calidad.pdf
+        └─ 9. RCBPA 2004-2007_Tablas de Incid. y Mortal..pdf
+        └─ RCBPA_2004-2007.pdf
+      └─ RCBPA 2008-2014/
+        └─ Mortalidad 2008-2014 RCBPA.pdf
+        └─ RCBPA 2008-2014.pdf
+        └─ RCBPA 2008-2014_organized.pdf
+      └─ RCBPA 2015-2022/
+        └─ AQP_anonimizado_OIIS EsSalud 2014-2022.xlsx
+        └─ CERVIX.xlsx
+        └─ COLON.xlsx
+        └─ Consoilidado Sinadef 2015 al 2022.xlsx
+        └─ Consolidado CANREG(Recuperado automáticamente) Liz.xlsx
+        └─ ESTOMAGO.xlsx
+        └─ LEUCEMIA.xlsx
+        └─ LINFOMAS.xlsx
+        └─ MAMA.xlsx
+        └─ PIEL.xlsx
+        └─ PROSTATA.xlsx
+        └─ PULMON.xlsx
+        └─ RCBPAQP 2015-2022.xlsx
+        └─ TIROIDES.xlsx
+        └─ Tto. Qx. H. Goyeneche - Oncología 2015-2024.xlsx
+└─ LICENSE
+└─ pop-registry-cancer-arequipa.Rproj
+└─ README.md
+└─ README.qmd
+└─ REPORTS/
+  └─ annex_dataset_structure.csv
+  └─ annex_variable_dictionary.csv
+  └─ annex_variable_presence_matrix.csv
+  └─ data_audit_log.json
+  └─ data_dictionary_by_sheet.csv
+  └─ data_dictionary_crosswalk.csv
+  └─ data_dictionary_decision_log.csv
+  └─ date_field_format_profile.csv
+  └─ domain_profile_priority_variables.csv
+  └─ domain_profile_priority_variables_by_year.csv
+  └─ harmonization_action_log.csv
+  └─ harmonization_dictionary.csv
+  └─ harmonization_exclusion_log.csv
+  └─ harmonization_pending_semantic_review.csv
+  └─ harmonization_run_metadata.json
+  └─ harmonization_summary.md
+  └─ harmonized_domain_profile.csv
+  └─ harmonized_variable_counts.csv
+  └─ local_dictionary_base_diagnostico.csv
+  └─ local_dictionary_estado_vital.csv
+  └─ local_dictionary_lateralidad.csv
+  └─ local_dictionary_sexo.csv
+  └─ local_unknown_codes_registry.csv
+  └─ METADATA/
+    └─ MASTER_DATA_STATUS_REPORT.md
+    └─ QA_master_files_detail.csv
+    └─ QA_master_files_summary.csv
+  └─ nul
+  └─ qc_structural_20260313.txt
+  └─ quality_indicator_field_availability.csv
+  └─ Reporte_Qc_Estructural_Arequipa.html
+  └─ Reporte_Qc_Estructural_Arequipa.pdf
+  └─ Reporte_Qc_Estructural_Arequipa.qmd
+  └─ Reporte_Qc_Estructural_Arequipa_files/
+    └─ figure-html/
+      └─ fig-age-diff-1.png
+      └─ fig-bad-cie10-1.png
+      └─ fig-missingness-criticas-1.png
+      └─ fig-year-diag-1.png
+    └─ libs/
+      └─ bootstrap/
+        └─ bootstrap-4d7f0bce1131f3e5f9547cd857cfbfc8.min.css
+        └─ bootstrap-icons.css
+        └─ bootstrap-icons.woff
+        └─ bootstrap.min.js
+      └─ clipboard/
+        └─ clipboard.min.js
+      └─ pagedtable-1.1/
+        └─ css/
+          └─ pagedtable.css
+        └─ js/
+          └─ pagedtable.js
+      └─ quarto-html/
+        └─ anchor.min.js
+        └─ axe/
+          └─ axe-check.js
+        └─ popper.min.js
+        └─ quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css
+        └─ quarto.js
+        └─ tabsets/
+          └─ tabsets.js
+        └─ tippy.css
+        └─ tippy.umd.min.js
+  └─ Reporte_Qc_Estructural_Arequipa_integrado_v1.pdf
+  └─ Reporte_Qc_Estructural_Arequipa_integrado_v1.qmd
+  └─ reporte_qmd.txt
+  └─ SEMANTIC
+  └─ semantic_consistency_checks.csv
+  └─ semantic_crosswalk_proposed.csv
+  └─ semantic_dictionary_manual_resolution_template.csv
+  └─ semantic_dictionary_rulebook.md
+  └─ semantic_dictionary_run_metadata.json
+  └─ semantic_dictionary_summary.md
+  └─ semantic_phase_run_metadata.json
+  └─ semantic_phase_summary.md
+  └─ semantic_problematic_values.csv
+  └─ semantic_recode_candidates.csv
+  └─ semantic_recode_pending_manual_review.csv
+  └─ value_frequency_base_diagnostico.csv
+  └─ value_frequency_estado_vital.csv
+  └─ value_frequency_lateralidad.csv
+  └─ value_frequency_sexo.csv
+  └─ variable_presence_by_year.csv
+  └─ variable_quality_profile.csv
+└─ SCRIPTS/
+  └─ 00_audit_raw_dictionary.R
+  └─ 01_build_harmonization_pipeline.R
+  └─ 02_semantic_recoding_and_domain_profiling.R
+  └─ 03_semantic_dictionary_building.R
+  └─ old/
+    └─ 0-aed.R
+    └─ 01_import_harmonize.R
+    └─ 02_quality_structural.R
+    └─ 03_quality_epidemiologic.R
+└─ tree_project.txt
