@@ -103,9 +103,9 @@ REPORTS/*_files/
 !REPORTS/*.md
 !REPORTS/METADATA/
 !REPORTS/METADATA/*.md
+!tree_project.txt
 
 # ============================================================
 # 8. OTROS ESPECIALES
 # ============================================================
-tree_project.txt
 arbol-estructura.R
