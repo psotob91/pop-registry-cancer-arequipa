@@ -3,6 +3,12 @@ PROJECT ROOT: C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_C
 └─ arbol-estructura.R
 └─ DATA/
   └─ DERIVED/
+    └─ ANALYTIC/
+      └─ rcpa_arequipa_2015_2022_analytic_dataset.csv
+      └─ rcpa_arequipa_2015_2022_analytic_dataset.rds
+      └─ rcpa_arequipa_2015_2022_analytic_dataset_active_denominator_rule.csv
+      └─ rcpa_arequipa_2015_2022_analytic_dataset_build_log.txt
+      └─ rcpa_arequipa_2015_2022_analytic_dataset_flag_summary.csv
     └─ METADATA/
       └─ MASTER_AGE_GROUP_RULES.csv
       └─ MASTER_ANALYTIC_DATASET_SPEC.csv
@@ -73,6 +79,15 @@ PROJECT ROOT: C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_C
     └─ MASTER_PENDING_USER_DECISIONS.md
     └─ MASTER_REPORTING_BLUEPRINT.md
 └─ LICENSE
+└─ META_MANIFESTS/
+  └─ all_manifiests.R
+  └─ DATA_REGISTRY.csv
+  └─ deprecated/
+    └─ data_registry.R
+    └─ meta_manifiest.R
+  └─ MANIFEST_BUILD_SUMMARY.txt
+  └─ MASTER_FILE_INDEX.csv
+  └─ PROJECT_SOURCE_PRIORITY.csv
 └─ pop-registry-cancer-arequipa.Rproj
 └─ README.md
 └─ README.qmd
@@ -104,7 +119,6 @@ PROJECT ROOT: C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_C
     └─ MASTER_DATA_STATUS_REPORT.md
     └─ QA_master_files_detail.csv
     └─ QA_master_files_summary.csv
-  └─ nul
   └─ qc_structural_20260313.txt
   └─ quality_indicator_field_availability.csv
   └─ Reporte_Qc_Estructural_Arequipa.html
@@ -176,7 +190,8 @@ PROJECT ROOT: C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_C
   └─ 02_semantic_recoding_and_domain_profiling.R
   └─ 03_semantic_dictionary_building.R
   └─ 04_semantic_standardization.R
-  └─ old/
+  └─ 05_build_analytic_dataset.R
+  └─ deprecated/
     └─ 0-aed.R
     └─ 01_import_harmonize.R
     └─ 02_quality_structural.R
