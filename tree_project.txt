@@ -4,7 +4,14 @@ PROJECT ROOT: C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_C
 └─ DATA/
   └─ DERIVED/
     └─ METADATA/
+      └─ MASTER_AGE_GROUP_RULES.csv
+      └─ MASTER_ANALYTIC_DATASET_SPEC.csv
+      └─ MASTER_ANALYTIC_FLAGS_RULES.csv
       └─ MASTER_DATA_DICTIONARY.csv
+      └─ MASTER_DENOMINATOR_RULES.csv
+      └─ MASTER_RESIDENCE_RULES.csv
+      └─ MASTER_VALUE_DICTIONARY.csv
+      └─ MASTER_VARIABLE_DECISION_TABLE.csv
       └─ MASTER_VARIABLE_MAP.csv
     └─ rcpa_arequipa_2015_2022_clean.rds
     └─ rcpa_arequipa_2015_2022_harmonized_long.rds
@@ -59,6 +66,12 @@ PROJECT ROOT: C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_C
         └─ RCBPAQP 2015-2022.xlsx
         └─ TIROIDES.xlsx
         └─ Tto. Qx. H. Goyeneche - Oncología 2015-2024.xlsx
+└─ DOCUMENTATION/
+  └─ MASTER/
+    └─ MASTER_ANALYTIC_DECISIONS.md
+    └─ MASTER_DENOMINATOR_AND_STANDARDIZATION_RULES.md
+    └─ MASTER_PENDING_USER_DECISIONS.md
+    └─ MASTER_REPORTING_BLUEPRINT.md
 └─ LICENSE
 └─ pop-registry-cancer-arequipa.Rproj
 └─ README.md
@@ -130,7 +143,16 @@ PROJECT ROOT: C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_C
   └─ Reporte_Qc_Estructural_Arequipa_integrado_v1.pdf
   └─ Reporte_Qc_Estructural_Arequipa_integrado_v1.qmd
   └─ reporte_qmd.txt
-  └─ SEMANTIC
+  └─ SEMANTIC/
+    └─ local_unknown_codes_registry_updated_20260317.csv
+    └─ semantic_decision_log_20260317.csv
+    └─ semantic_dictionary_updates_20260317.csv
+    └─ semantic_pattern_clusters_20260317.csv
+    └─ semantic_priority_coverage_20260317.csv
+    └─ semantic_standardization_preview_long_20260317.rds
+    └─ semantic_standardization_run_metadata_20260317.json
+    └─ semantic_standardization_summary_20260317.md
+    └─ semantic_value_profile_20260317.csv
   └─ semantic_consistency_checks.csv
   └─ semantic_crosswalk_proposed.csv
   └─ semantic_dictionary_manual_resolution_template.csv
@@ -153,6 +175,7 @@ PROJECT ROOT: C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_C
   └─ 01_build_harmonization_pipeline.R
   └─ 02_semantic_recoding_and_domain_profiling.R
   └─ 03_semantic_dictionary_building.R
+  └─ 04_semantic_standardization.R
   └─ old/
     └─ 0-aed.R
     └─ 01_import_harmonize.R

@@ -1,0 +1,4 @@
+source_type,priority,applies_when,selection_rule,fallback_rule,notes
+project_sources,1,Dataset o archivo no público subido a Fuentes del proyecto,Usar primero esta fuente si el archivo está disponible en el chat/proyecto.,"Si no está disponible, revisar GitHub o usar la ruta esperada del manifiesto.",Prioridad máxima para datos no públicos.
+github_repo,2,"Código, manifiestos, YAML/JSON y CSV maestros versionados",Usar el repositorio GitHub conectado como fuente principal estructural.,"Si no existe en GitHub, revisar Fuentes del proyecto o ruta esperada.",Fuente principal para código y metadata canónica.
+expected_project_path,3,Archivo esperado por estructura del proyecto pero no accesible aquí,No inventar contenido; usar path_relative y load_instructions para generar código.,Esperar a que el usuario suba el archivo o trabajar con mocks/estructura.,Fallback estructural reproducible.

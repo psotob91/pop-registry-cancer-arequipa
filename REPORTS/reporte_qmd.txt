@@ -1,0 +1,966 @@
+---
+title: "Evaluación de calidad estructural del Registro de Cáncer de Base Poblacional de Arequipa, 2015-2022"
+subtitle: "Diagnóstico de completitud, consistencia interna, plausibilidad y riesgos para el análisis epidemiológico"
+author: "Percy Soto Becerra"
+date: today
+lang: es
+format:
+  # html:
+  #   toc: true
+  #   toc-depth: 3
+  #   number-sections: true
+  #   code-fold: false
+  #   code-tools: false
+  #   theme: cosmo
+  #   df-print: paged
+  pdf:
+    toc: true
+    number-sections: true
+    papersize: a4
+    geometry:
+      - margin=2.2cm
+execute:
+  echo: false
+  warning: false
+  message: false
+editor: visual
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(lubridate)
+  library(glue)
+  library(scales)
+  library(gt)
+  library(gtsummary)
+  library(janitor)
+  library(patchwork)
+  library(knitr)
+  library(kableExtra)
+  library(here)
+  library(fs)
+  library(rlang)
+})
+
+options(
+  scipen = 999,
+  dplyr.summarise.inform = FALSE
+)
+
+project_root_candidates <- c(
+  "pop-registry-cancer-arequipa.Rproj",
+  "tree_project.txt",
+  "arbol-estructura.R"
+)
+
+find_project_root <- function() {
+  root <- tryCatch({
+    here::i_am("pop-registry-cancer-arequipa.Rproj")
+    here::here()
+  }, error = function(e) NULL)
+  if (!is.null(root) && dir_exists(root)) return(root)
+  wd <- normalizePath(getwd(), winslash = "/", mustWork = FALSE)
+  path_now <- wd
+  for (i in 0:8) {
+    has_marker <- any(file_exists(file.path(path_now, project_root_candidates)))
+    if (has_marker) return(path_now)
+    parent <- dirname(path_now)
+    if (identical(parent, path_now)) break
+    path_now <- parent
+  }
+  wd
+}
+
+project_root <- find_project_root()
+knitr::opts_knit$set(root.dir = project_root)
+path_in_root <- function(...) file.path(project_root, ...)
+
+in_rds   <- path_in_root("DATA", "DERIVED", "rcpa_arequipa_2015_2022_clean.rds")
+out_dir  <- path_in_root("REPORTS")
+fig_dir  <- file.path(out_dir, "figures_qc_structural")
+script_import <- path_in_root("SCRIPTS", "01_import_harmonize.R")
+
+if (!dir_exists(out_dir)) dir_create(out_dir, recurse = TRUE)
+if (!dir_exists(fig_dir)) dir_create(fig_dir, recurse = TRUE)
+
+if (!file_exists(in_rds)) {
+  if (file_exists(script_import)) {
+    source(script_import, local = new.env(parent = globalenv()))
+  } else {
+    abort(glue(
+      "No se encontró el archivo RDS esperado en: {in_rds}
+",
+      "Tampoco se encontró el script de importación en: {script_import}
+",
+      "Verifica el root del proyecto o ejecuta primero 01_import_harmonize.R."
+    ))
+  }
+}
+
+if (!file_exists(in_rds)) {
+  abort(glue(
+    "Después de intentar la construcción automática, el archivo aún no existe: {in_rds}
+",
+    "Revisa que el archivo Excel fuente esté en DATA/RAW/RCBPAQP 2015-2022.xlsx y que el script 01_import_harmonize.R corra sin error."
+  ))
+}
+
+dt_all <- readRDS(in_rds)
+
+fmt_n <- function(x) formatC(x, format = "f", digits = 0, big.mark = ",")
+fmt_pct <- function(x, digits = 2) sprintf(paste0("%.", digits, "f%%"), x)
+fmt_np <- function(n, d, digits = 2) glue("{fmt_n(n)} ({fmt_pct(100 * n / d, digits)})")
+
+safe_min <- function(x) if (all(is.na(x))) NA else suppressWarnings(min(x, na.rm = TRUE))
+safe_max <- function(x) if (all(is.na(x))) NA else suppressWarnings(max(x, na.rm = TRUE))
+safe_quant <- function(x, p) if (all(is.na(x))) NA else suppressWarnings(as.numeric(quantile(x, p, na.rm = TRUE)))
+
+sexo_std_fun <- function(x) {
+  x_chr <- stringr::str_to_upper(stringr::str_trim(as.character(x)))
+  case_when(
+    x_chr %in% c("M", "MALE", "H", "HOMBRE", "1") ~ "M",
+    x_chr %in% c("F", "FEMALE", "MUJER", "2") ~ "F",
+    x_chr %in% c("", "NA", "N/A", "NULL") ~ NA_character_,
+    TRUE ~ NA_character_
+  )
+}
+
+cie10_std_fun <- function(x) {
+  x %>% 
+    as.character() %>% 
+    str_trim() %>% 
+    str_to_upper() %>% 
+    str_replace_all("\\s+", "")
+}
+
+n_reg <- nrow(dt_all)
+n_var <- ncol(dt_all)
+
+missing_full <- dt_all %>%
+  summarise(across(everything(), ~ mean(is.na(.)) * 100)) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "pct_na") %>%
+  arrange(desc(pct_na))
+
+rows_all_na <- dt_all %>% filter(if_all(everything(), ~ is.na(.)))
+
+cols_all_na <- dt_all %>%
+  summarise(across(everything(), ~ all(is.na(.)))) %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "all_na") %>%
+  filter(all_na)
+
+dup_exact <- dt_all %>%
+  group_by(across(everything())) %>%
+  filter(n() > 1) %>%
+  ungroup()
+
+if ("edad" %in% names(dt_all)) {
+  edad_fuera_rango <- dt_all %>% filter(!is.na(edad) & (edad < 0 | edad > 110))
+  edad_stats <- dt_all %>%
+    summarise(
+      min_edad = safe_min(edad),
+      max_edad = safe_max(edad),
+      p01 = safe_quant(edad, 0.01),
+      p99 = safe_quant(edad, 0.99)
+    )
+} else {
+  edad_fuera_rango <- tibble()
+  edad_stats <- tibble(min_edad = NA, max_edad = NA, p01 = NA, p99 = NA)
+}
+
+date_vars <- intersect(c("fecdiag", "fecnac", "fecdef", "fuc"), names(dt_all))
+
+date_parse_tbl <- map_dfr(date_vars, function(v) {
+  raw_var <- paste0(v, "_raw")
+  if (!raw_var %in% names(dt_all)) return(NULL)
+  tibble(
+    variable = v,
+    no_parse = dt_all %>%
+      filter(is.na(.data[[v]]), !is.na(.data[[raw_var]]), str_trim(.data[[raw_var]]) != "") %>%
+      nrow()
+  )
+}) %>% mutate(pct = 100 * no_parse / n_reg)
+
+if (all(c("fecdiag", "fecdef") %in% names(dt_all))) {
+  inconsist_fecha <- dt_all %>%
+    filter(!is.na(fecdiag), !is.na(fecdef), fecdiag > fecdef)
+  if (nrow(inconsist_fecha) > 0) {
+    desfase <- inconsist_fecha %>%
+      mutate(days_diff = as.integer(fecdiag - fecdef)) %>%
+      summarise(
+        min_days = min(days_diff, na.rm = TRUE),
+        p50_days = median(days_diff, na.rm = TRUE),
+        p95_days = quantile(days_diff, 0.95, na.rm = TRUE),
+        max_days = max(days_diff, na.rm = TRUE)
+      )
+  } else {
+    desfase <- tibble(min_days = NA, p50_days = NA, p95_days = NA, max_days = NA)
+  }
+} else {
+  inconsist_fecha <- tibble()
+  desfase <- tibble(min_days = NA, p50_days = NA, p95_days = NA, max_days = NA)
+}
+
+if ("fecdiag" %in% names(dt_all)) {
+  diag_year_tbl <- dt_all %>%
+    mutate(year_diag = year(fecdiag)) %>%
+    count(year_diag, sort = FALSE)
+  diag_year_range <- dt_all %>%
+    mutate(year_diag = year(fecdiag)) %>%
+    summarise(min_year_diag = safe_min(year_diag), max_year_diag = safe_max(year_diag))
+  diag_year_plaus_tbl <- dt_all %>%
+    mutate(year_diag = year(fecdiag)) %>%
+    mutate(periodo_diag = case_when(
+      is.na(year_diag) ~ "Año faltante",
+      year_diag < 2015 ~ "Antes de 2015",
+      year_diag > 2022 ~ "Después de 2022",
+      TRUE ~ "2015-2022"
+    )) %>%
+    count(periodo_diag, sort = FALSE)
+} else {
+  diag_year_tbl <- tibble(year_diag = integer(), n = integer())
+  diag_year_range <- tibble(min_year_diag = NA, max_year_diag = NA)
+  diag_year_plaus_tbl <- tibble(periodo_diag = character(), n = integer())
+}
+
+if ("fecnac" %in% names(dt_all)) {
+  nac_year_range <- dt_all %>%
+    mutate(year_nac = year(fecnac)) %>%
+    summarise(min_year_nac = safe_min(year_nac), max_year_nac = safe_max(year_nac))
+  nac_year_plaus_tbl <- dt_all %>%
+    mutate(year_nac = year(fecnac)) %>%
+    mutate(periodo_nac = case_when(
+      is.na(year_nac) ~ "Año faltante",
+      year_nac < 1900 ~ "Antes de 1900",
+      year_nac > 2022 ~ "Después de 2022",
+      TRUE ~ "1900-2022"
+    )) %>%
+    count(periodo_nac, sort = FALSE)
+} else {
+  nac_year_range <- tibble(min_year_nac = NA, max_year_nac = NA)
+  nac_year_plaus_tbl <- tibble(periodo_nac = character(), n = integer())
+}
+
+if (all(c("edad", "fecdiag", "fecnac") %in% names(dt_all))) {
+  edad_calc <- dt_all %>%
+    filter(!is.na(edad), !is.na(fecdiag), !is.na(fecnac)) %>%
+    mutate(
+      edad_recalc = floor(time_length(interval(fecnac, fecdiag), "years")),
+      diff = abs(edad - edad_recalc)
+    )
+  age_cons <- edad_calc %>%
+    summarise(
+      n = n(),
+      inconsistentes_gt1 = sum(diff > 1, na.rm = TRUE),
+      pct_inconsistentes_gt1 = 100 * mean(diff > 1, na.rm = TRUE),
+      inconsistentes_gt2 = sum(diff > 2, na.rm = TRUE),
+      pct_inconsistentes_gt2 = 100 * mean(diff > 2, na.rm = TRUE)
+    )
+  age_diff_tbl <- edad_calc %>% count(diff, sort = TRUE)
+} else {
+  edad_calc <- tibble()
+  age_cons <- tibble(n = NA, inconsistentes_gt1 = NA, pct_inconsistentes_gt1 = NA, inconsistentes_gt2 = NA, pct_inconsistentes_gt2 = NA)
+  age_diff_tbl <- tibble(diff = numeric(), n = integer())
+}
+
+if ("sexo" %in% names(dt_all)) {
+  sexo_tbl <- dt_all %>% count(sexo, sort = TRUE)
+  dt_all <- dt_all %>% mutate(sexo_std = sexo_std_fun(sexo))
+} else {
+  sexo_tbl <- tibble(sexo = character(), n = integer())
+  dt_all <- dt_all %>% mutate(sexo_std = NA_character_)
+}
+
+if ("cie10" %in% names(dt_all)) {
+  dt_all <- dt_all %>% mutate(cie10_std = cie10_std_fun(cie10))
+  bad_cie10_tbl <- dt_all %>%
+    filter(!is.na(cie10_std), cie10_std != "", !str_detect(cie10_std, "^(C\\d{2}|D0[0-9])")) %>%
+    count(cie10_std, sort = TRUE)
+} else {
+  bad_cie10_tbl <- tibble(cie10_std = character(), n = integer())
+}
+
+if (all(c("cie10", "sexo_std") %in% names(dt_all))) {
+  site_sex_tbl <- tibble(
+    problema = c(
+      "Próstata (C61) en sexo femenino",
+      "Cérvix (C53) en sexo masculino",
+      "Mama (C50) en sexo masculino"
+    ),
+    n = c(
+      dt_all %>% filter(!is.na(sexo_std), str_detect(cie10_std, "^C61"), sexo_std == "F") %>% nrow(),
+      dt_all %>% filter(!is.na(sexo_std), str_detect(cie10_std, "^C53"), sexo_std == "M") %>% nrow(),
+      dt_all %>% filter(!is.na(sexo_std), str_detect(cie10_std, "^C50"), sexo_std == "M") %>% nrow()
+    )
+  )
+} else {
+  site_sex_tbl <- tibble(problema = character(), n = integer())
+}
+
+if (all(c("topo", "morf") %in% names(dt_all))) {
+  topo_morf_missing_tbl <- dt_all %>%
+    transmute(
+      topo_missing = is.na(topo) | str_trim(as.character(topo)) == "",
+      morf_missing = is.na(morf) | str_trim(as.character(morf)) == ""
+    ) %>%
+    summarise(
+      n_total = n(),
+      n_ambos_presentes = sum(!topo_missing & !morf_missing),
+      pct_ambos_presentes = 100 * mean(!topo_missing & !morf_missing),
+      n_solo_topo = sum(!topo_missing & morf_missing),
+      pct_solo_topo = 100 * mean(!topo_missing & morf_missing),
+      n_solo_morf = sum(topo_missing & !morf_missing),
+      pct_solo_morf = 100 * mean(topo_missing & !morf_missing),
+      n_ambos_missing = sum(topo_missing & morf_missing),
+      pct_ambos_missing = 100 * mean(topo_missing & morf_missing)
+    )
+} else {
+  topo_morf_missing_tbl <- tibble()
+}
+
+if (all(c("morf", "comport") %in% names(dt_all))) {
+  morf_beh_tbl <- dt_all %>%
+    transmute(
+      morf_chr = str_trim(as.character(morf)),
+      comport_chr = str_trim(as.character(comport)),
+      morf_last_digit = str_extract(morf_chr, "[0-9]$")
+    ) %>%
+    mutate(
+      comparable = !is.na(morf_last_digit) & morf_last_digit != "" & !is.na(comport_chr) & comport_chr != "",
+      inconsistent = comparable & morf_last_digit != comport_chr
+    ) %>%
+    summarise(
+      n_comparables = sum(comparable),
+      n_inconsistentes = sum(inconsistent),
+      pct_inconsistentes = ifelse(sum(comparable) > 0, 100 * mean(inconsistent[comparable]), NA_real_)
+    )
+} else {
+  morf_beh_tbl <- tibble(n_comparables = NA, n_inconsistentes = NA, pct_inconsistentes = NA)
+}
+
+if (all(c("base_dx", "morf") %in% names(dt_all))) {
+  mv_like_tbl <- dt_all %>%
+    transmute(
+      morf_present = !is.na(morf) & str_trim(as.character(morf)) != "",
+      base_dx_chr = str_to_upper(str_trim(as.character(base_dx))),
+      base_histologica = str_detect(base_dx_chr, "HIST|MICRO|HIS|CITO|CYTO|AP")
+    ) %>%
+    summarise(
+      n_total = n(),
+      n_morf_present = sum(morf_present),
+      pct_morf_present = 100 * mean(morf_present),
+      n_base_histologica = sum(base_histologica, na.rm = TRUE),
+      pct_base_histologica = 100 * mean(base_histologica, na.rm = TRUE)
+    )
+} else {
+  mv_like_tbl <- tibble(n_total = NA, n_morf_present = NA, pct_morf_present = NA, n_base_histologica = NA, pct_base_histologica = NA)
+}
+
+qc_record_profile <- dt_all %>%
+  mutate(
+    year_diag = if ("fecdiag" %in% names(dt_all)) year(fecdiag) else NA_real_,
+    flag_year_outside = if ("fecdiag" %in% names(dt_all)) !is.na(year_diag) & (year_diag < 2015 | year_diag > 2022) else FALSE,
+    flag_diag_gt_def = if (all(c("fecdiag", "fecdef") %in% names(dt_all))) !is.na(fecdiag) & !is.na(fecdef) & fecdiag > fecdef else FALSE,
+    flag_bad_sexo = if ("sexo" %in% names(dt_all)) is.na(sexo_std) & !is.na(sexo) else FALSE,
+    flag_bad_cie10 = if ("cie10" %in% names(dt_all)) !is.na(cie10_std) & cie10_std != "" & !str_detect(cie10_std, "^(C\\d{2}|D0[0-9])") else FALSE,
+    flag_age_outside = if ("edad" %in% names(dt_all)) !is.na(edad) & (edad < 0 | edad > 110) else FALSE,
+    n_flags = flag_year_outside + flag_diag_gt_def + flag_bad_sexo + flag_bad_cie10 + flag_age_outside
+  ) %>%
+  count(n_flags, sort = FALSE) %>%
+  mutate(pct = 100 * n / sum(n))
+
+criticas <- intersect(c("fecdiag", "topo", "morf", "sexo", "edad", "res", "cie10", "fecnac", "fecdef"), names(dt_all))
+missing_crit_tbl <- if (length(criticas) > 0) {
+  dt_all %>%
+    summarise(across(all_of(criticas), ~ mean(is.na(.)) * 100)) %>%
+    pivot_longer(everything(), names_to = "variable", values_to = "pct_na") %>%
+    arrange(desc(pct_na))
+} else {
+  tibble(variable = character(), pct_na = numeric())
+}
+
+summary_qc <- tibble(
+  indicador = c(
+    "Registros totales",
+    "Variables totales",
+    "Filas completamente vacías",
+    "Columnas completamente vacías",
+    "Duplicados exactos",
+    "Edad fuera de rango",
+    "Diagnóstico posterior a defunción"
+  ),
+  valor = c(n_reg, n_var, nrow(rows_all_na), nrow(cols_all_na), nrow(dup_exact), nrow(edad_fuera_rango), nrow(inconsist_fecha))
+)
+
+risk_matrix <- tribble(
+  ~problema, ~hallazgo, ~criticidad, ~impacto_principal, ~manejo_sugerido,
+  "Variables completamente vacías o casi vacías", glue("{nrow(cols_all_na)} columnas 100% vacías; revisar además variables con >90% missing"), "Moderada", "Reduce utilidad analítica de algunos dominios, pero no necesariamente compromete el análisis principal si las variables no son nucleares.", "Excluir del análisis principal, documentar su no uso y diferenciar variables operativas de variables analíticas.",
+  "Fechas no parseables", if (nrow(date_parse_tbl) > 0) paste(glue("{date_parse_tbl$variable}: {date_parse_tbl$no_parse}"), collapse = "; ") else "Sin evaluación", "Moderada", "Puede sesgar la asignación temporal, el cálculo de edad derivada, la supervivencia y el seguimiento.", "Reintentar parseo con reglas adicionales, conservar campos crudos y generar banderas por variable.",
+  "Diagnóstico posterior a defunción", glue("{nrow(inconsist_fecha)} registros"), "Alta", "Compromete la coherencia temporal básica; afecta análisis de incidencia, supervivencia, secuencia clínica y plausibilidad del episodio.", "Marcar, revisar contra fuente original y excluir del análisis principal si no se logra justificar o corregir.",
+  "Edad fuera de rango", glue("{nrow(edad_fuera_rango)} registros"), "Baja a moderada", "Afecta muy pocos registros, pero sugiere errores de digitación o codificación puntual.", "Corregir manualmente cuando sea posible o recodificar como faltante.",
+  "Edad inconsistente con fechas", if (!is.na(age_cons$n)) glue("{age_cons$inconsistentes_gt1} registros con discrepancia >1 año") else "Sin evaluación", "Moderada a alta", "Puede alterar la estratificación etaria, tasas específicas por edad y comparabilidad interna.", "Priorizar edad derivada cuando las fechas sean confiables; mantener traza del valor original.",
+  "Sexo con codificación heterogénea", if (nrow(sexo_tbl) > 0) paste(glue("{sexo_tbl$sexo}: {sexo_tbl$n}"), collapse = "; ") else "Sin evaluación", "Moderada", "Puede inducir errores de clasificación en análisis por sexo y en controles de plausibilidad por sitio.", "Estandarizar a una codificación única y aislar valores anómalos.",
+  "CIE-10 no estandarizado o atípico", glue("{nrow(bad_cie10_tbl)} códigos atípicos distintos reportados"), "Alta", "Puede sesgar la clasificación por sitio tumoral y afectar tabulados, agrupaciones y estimaciones por localización.", "Normalizar, validar y clasificar en oncológico válido, no oncológico e inválido.",
+  "Topografía y morfología incompletas", if (nrow(topo_morf_missing_tbl) > 0) glue("{round(topo_morf_missing_tbl$pct_ambos_missing, 2)}% con ambos campos ausentes") else "Sin evaluación", "Alta", "Debilita la caracterización oncológica del caso y puede impedir agrupaciones sustantivas por sitio e histología.", "Evaluar su completitud como dimensión prioritaria y considerar exclusiones analíticas según objetivo.",
+  "Discordancia morfología-comportamiento", if (nrow(morf_beh_tbl) > 0) glue("{round(morf_beh_tbl$pct_inconsistentes, 2)}% de inconsistencias entre registros comparables") else "Sin evaluación", "Moderada a alta", "Sugiere problemas de codificación oncológica y puede afectar la interpretación biológica del tumor.", "Revisar reglas de codificación y priorizar auditoría de registros discordantes.",
+  "Proxy de verificación morfológica", if (nrow(mv_like_tbl) > 0) glue("{round(mv_like_tbl$pct_morf_present, 2)}% con morfología presente") else "Sin evaluación", "Moderada", "Permite aproximar la solidez diagnóstica estructural, aunque no reemplaza indicadores estándar formalmente validados.", "Usarlo solo como proxy estructural y complementarlo con revisión de base diagnóstica."
+)
+
+if (all(c("sheet_source", "fecdiag") %in% names(dt_all))) {
+  qc_by_sheet <- dt_all %>%
+    mutate(
+      year_diag = year(fecdiag),
+      flag_year_outside = !is.na(year_diag) & (year_diag < 2015 | year_diag > 2022),
+      flag_diag_gt_def = !is.na(fecdiag) & !is.na(fecdef) & fecdiag > fecdef,
+      flag_bad_sexo = is.na(sexo_std) & !is.na(sexo),
+      flag_bad_cie10 = !is.na(cie10_std) & cie10_std != "" & !str_detect(cie10_std, "^(C\\d{2}|D0[0-9])")
+    ) %>%
+    group_by(sheet_source) %>%
+    summarise(
+      n = n(),
+      pct_year_outside = 100 * mean(flag_year_outside, na.rm = TRUE),
+      pct_diag_gt_def = 100 * mean(flag_diag_gt_def, na.rm = TRUE),
+      pct_bad_sexo = 100 * mean(flag_bad_sexo, na.rm = TRUE),
+      pct_bad_cie10 = 100 * mean(flag_bad_cie10, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    arrange(desc(pct_diag_gt_def), desc(pct_year_outside))
+} else {
+  qc_by_sheet <- tibble()
+}
+```
+
+# Resumen ejecutivo
+
+La presente evaluación examina la calidad estructural de la base consolidada del Registro de Cáncer de Base Poblacional de Arequipa correspondiente al periodo 2015-2022. El propósito no es solamente describir problemas de limpieza de datos en sentido operativo, sino valorar en qué medida dichos problemas pueden comprometer la validez de los análisis posteriores y cuáles de ellos deben entenderse como limitaciones documentales del sistema, como fallas de estandarización o como inconsistencias con potencial de introducir sesgo epidemiológico.
+
+La base evaluada contiene `r fmt_n(n_reg)` registros y `r fmt_n(n_var)` variables. En términos generales, la estructura fila a fila luce estable: no se identificaron filas completamente vacías ni duplicados exactos. Ello sugiere que la consolidación no produjo, al menos de manera evidente, replicación literal de observaciones ni contaminación masiva del nivel de registro. Sin embargo, esta fortaleza no debe interpretarse como garantía de unicidad sustantiva, ya que un mismo caso puede aparecer más de una vez con pequeñas diferencias en variables administrativas, cronológicas o clínicas.
+
+Los principales hallazgos se concentran en cinco dominios. Primero, la completitud es marcadamente heterogénea: algunas variables están completamente vacías o casi vacías, mientras que otras conservan buen nivel de información. Segundo, persisten errores de parseo en fechas y valores cronológicos implausibles, especialmente en fecha de nacimiento y en un subconjunto de fechas de diagnóstico. Tercero, existen inconsistencias lógicas importantes, en particular registros con fecha de diagnóstico posterior a la fecha de defunción, y en varios de ellos el desfase es tan grande que sugiere problemas más profundos de captura o transformación. Cuarto, se observan irregularidades de codificación en variables estratégicas como sexo y CIE-10. Quinto, la evaluación conjunta de topografía, morfología y otras variables oncológicas sugiere que la caracterización tumoral es en general usable, pero no homogénea en toda la base.
+
+En conjunto, estos hallazgos no obligan a descartar la base. Más bien indican que su utilización para análisis de incidencia, caracterización por sitio tumoral, distribución por sexo y edad o análisis temporales debe apoyarse en una capa explícita de depuración reproducible, con reglas transparentes, variables derivadas paralelas y banderas de calidad por registro. En otras palabras, la base es utilizable, pero no conviene tratarla como si ya fuese un dataset analítico final.
+
+# Objetivo
+
+El objetivo de este reporte es documentar la calidad estructural de la base consolidada, interpretar la relevancia analítica de los problemas identificados y proponer criterios razonables para su manejo en el análisis epidemiológico posterior. De manera complementaria, se incluyen recomendaciones de prevención orientadas a mejorar la captura, la trazabilidad y la gobernanza de datos en futuras iteraciones del registro.
+
+# Métodos
+
+## Alcance de la evaluación
+
+La evaluación se centró en dimensiones de calidad estructural y coherencia interna: completitud por variable, existencia de filas o columnas completamente vacías, duplicación exacta, plausibilidad de la edad, consistencia temporal entre fechas, heterogeneidad de codificación de sexo, formato de códigos CIE-10, y compatibilidad lógica básica entre sexo y sitio tumoral. Adicionalmente, se exploraron indicadores más cercanos al núcleo oncológico del registro, como la completitud conjunta de topografía y morfología, la concordancia entre morfología y comportamiento y un proxy estructural de verificación morfológica.
+
+No se evaluó en esta etapa la calidad clínica del diagnóstico, la exhaustividad del registro frente a fuentes externas, la completitud por institución notificadora, la unicidad de pacientes basada en identificadores indirectos ni la detección de duplicados probabilísticos. Tampoco se estimaron indicadores formales de calidad IARC/IACR a partir de reglas de auditoría clínica exhaustiva; por ello, los hallazgos aquí presentados deben entenderse como una evaluación estructural y preliminarmente analítica, no como una certificación exhaustiva de calidad del registro.
+
+# Descripción general de la base
+
+Antes de entrar en detalles, conviene resumir la magnitud del dataset y algunos hallazgos globales. La **Tabla 1** presenta ese panorama general.
+
+```{r}
+#| label: tab-resumen-general
+summary_qc %>%
+  mutate(valor = fmt_n(valor)) %>%
+  gt() %>%
+  tab_header(title = md("**Tabla 1. Resumen estructural de la base**"))
+```
+
+La base contiene `r fmt_n(n_reg)` observaciones y `r fmt_n(n_var)` variables. Este volumen es suficiente para que porcentajes aparentemente pequeños se traduzcan en cantidades absolutas de registros nada despreciables. Así, por ejemplo, una anomalía presente en menos del 1% del archivo todavía puede implicar decenas o cientos de observaciones potencialmente comprometidas. Por ello, a lo largo del reporte se interpreta cada hallazgo tanto en términos relativos como absolutos.
+
+# Resultados
+
+## Completitud global
+
+### Panorama general de pérdida de datos
+
+La primera dimensión evaluada fue la completitud. La **Tabla 2** resume las 25 variables con mayor proporción de valores perdidos, mientras que la **Figura 1** concentra la atención en variables críticas para el análisis epidemiológico.
+
+```{r}
+#| label: tab-missingness-top
+missing_full %>%
+  slice_head(n = 25) %>%
+  mutate(pct_na = round(pct_na, 2)) %>%
+  gt() %>%
+  tab_header(title = md("**Tabla 2. Top 25 variables con mayor porcentaje de valores perdidos**"))
+```
+
+```{r}
+#| label: fig-missingness-criticas
+#| fig-cap: "Figura 1. Porcentaje de valores perdidos en variables críticas para el análisis epidemiológico."
+if (nrow(missing_crit_tbl) > 0) {
+  missing_crit_tbl %>%
+    mutate(variable = fct_reorder(variable, pct_na)) %>%
+    ggplot(aes(x = pct_na, y = variable)) +
+    geom_col() +
+    scale_x_continuous(labels = function(x) paste0(round(x, 1), "%")) +
+    labs(x = "% de valores perdidos", y = NULL) +
+    theme_minimal(base_size = 11)
+}
+```
+
+La completitud no es homogénea entre variables. Este punto es importante porque un porcentaje global de missingness puede dar una falsa sensación de control cuando, en realidad, el problema está fuertemente concentrado en campos específicos. En esta base se observan variables completamente vacías y otras con ausencia casi total, un patrón compatible con campos históricos no utilizados, variables presentes en el modelo de datos pero no operativas en la captura rutinaria, o variables conceptualmente relevantes cuya implementación ha sido débil.
+
+Desde el punto de vista analítico, la importancia de este hallazgo depende del rol de cada variable. Si un campo con 100% de pérdida es meramente administrativo, el impacto puede limitarse a la documentación del sistema. En cambio, cuando la ausencia afecta variables con relevancia epidemiológica —como residencia, fechas, secuencia de primarios o variables diagnósticas— la implicancia es mayor, porque limita la elegibilidad geográfica, la comparabilidad y la definición misma del caso analítico.
+
+En el conjunto observado, la mayor parte de la pérdida extrema parece concentrarse en variables no nucleares o no operativas. Esto atenúa la preocupación, aunque no la elimina. En particular, la ausencia casi total de `res` limita la posibilidad de aplicar con rigor un criterio geográfico explícito de residencia dentro del área cubierta por el registro. Esa limitación debe quedar claramente documentada.
+
+### Columnas completamente vacías
+
+La **Tabla 3** detalla las columnas completamente vacías identificadas en la base.
+
+```{r}
+#| label: tab-columnas-vacias
+cols_all_na %>%
+  gt() %>%
+  tab_header(title = md("**Tabla 3. Columnas completamente vacías**"))
+```
+
+La existencia de `r fmt_n(nrow(cols_all_na))` columnas completamente vacías debe leerse con cautela. No implica por sí sola que la base esté mal construida, pero sí sugiere un desacople entre el diseño del diccionario y el uso real del sistema. En términos de gobernanza de datos, este patrón indica que el modelo de datos contiene campos que no están generando información útil. Ello complica la documentación, induce falsas expectativas sobre la disponibilidad analítica y puede dificultar la interoperabilidad si terceros asumen que esos campos son efectivamente operativos.
+
+Se sugiere conservar estas columnas en la capa cruda por trazabilidad, pero excluirlas del análisis principal y distinguir explícitamente entre variables fuente, variables operativas y variables analíticas.
+
+## Filas vacías y duplicación exacta
+
+No se identificaron filas completamente vacías ni duplicados exactos. Este hallazgo es favorable, aunque limitado. En términos estrictamente estructurales, indica que la consolidación preservó la identidad fila a fila sin producir registros evidentemente inservibles ni clones literales. En bases de registro poblacional, esta es una condición necesaria, aunque no suficiente, de calidad.
+
+La ausencia de duplicados exactos no descarta la presencia de duplicación sustantiva. Dos registros pueden corresponder al mismo caso y diferir en una o pocas variables, sobre todo si provienen de distintas fuentes o momentos de actualización. Por ello, este resultado debe considerarse un indicador favorable de bajo nivel, no una certificación de unicidad del caso.
+
+## Plausibilidad y consistencia de la edad
+
+### Edad fuera de rango
+
+La **Tabla 4** resume la plausibilidad básica de la variable edad.
+
+```{r}
+#| label: tab-edad-stats
+edad_stats %>%
+  mutate(across(everything(), round, 2)) %>%
+  gt() %>%
+  tab_header(title = md("**Tabla 4. Resumen de plausibilidad de la edad**"))
+```
+
+El hallazgo de `r fmt_n(nrow(edad_fuera_rango))` registros con edad fuera del rango 0-110 años es cuantitativamente pequeño. En una base de este tamaño, ello sugiere que la variable edad no presenta un problema masivo de digitación en sus extremos. Desde el punto de vista epidemiológico, esto es favorable, ya que la edad es una variable axial para la mayor parte de los análisis oncológicos.
+
+Sin embargo, el resumen también revela extremos muy improbables —como edades negativas o extremadamente elevadas— que obligan a interpretar estos pocos registros como errores de captura o transformación más que como simples valores raros. Aunque sean pocos, merecen ser marcados y revisados.
+
+### Consistencia entre edad reportada y edad recalculada
+
+La consistencia entre edad reportada y edad derivada se resume en la **Tabla 5**, y su distribución se visualiza en la **Figura 2**.
+
+```{r}
+#| label: tab-age-cons
+age_cons %>%
+  mutate(across(everything(), ~ ifelse(is.numeric(.), round(., 2), .))) %>%
+  gt() %>%
+  tab_header(title = md("**Tabla 5. Consistencia entre edad reportada y edad recalculada**"))
+```
+
+```{r}
+#| label: fig-age-diff
+#| fig-cap: "Figura 2. Distribución de la discrepancia absoluta entre edad reportada y edad recalculada a partir de fecha de nacimiento y fecha de diagnóstico."
+if (nrow(age_diff_tbl) > 0) {
+  age_diff_tbl %>%
+    slice_head(n = 15) %>%
+    ggplot(aes(x = diff, y = n)) +
+    geom_col() +
+    labs(x = "Diferencia absoluta en años", y = "Número de registros") +
+    theme_minimal(base_size = 11)
+}
+```
+
+La evaluación de consistencia muestra un patrón más matizado. Aunque los extremos de la edad son poco frecuentes, `r fmt_n(age_cons$inconsistentes_gt1)` de `r fmt_n(age_cons$n)` registros comparables presentan una discrepancia mayor a un año entre la edad reportada y la derivada a partir de `fecnac` y `fecdiag`, lo que equivale a `r fmt_pct(age_cons$pct_inconsistentes_gt1)`.
+
+Una discrepancia de un año puede obedecer a la cercanía con el cumpleaños o a diferencias entre edad cumplida y edad en años calendario. No obstante, discrepancias sistemáticas mayores a uno o dos años sugieren algo más que ruido administrativo: errores de digitación en fecha de nacimiento o diagnóstico, captura aproximada de la edad, recodificación posterior del registro o coexistencia de fuentes con reglas distintas de consignación. En análisis con grupos amplios de edad el efecto puede ser moderado; en análisis por edad simple, tasas específicas o modelos sensibles a la edad, la implicancia es más seria.
+
+Se sugiere crear una edad derivada reproducible y usarla prioritariamente cuando las fechas sean plausibles, preservando siempre la edad original como variable fuente y como pista de auditoría.
+
+## Calidad temporal de las fechas
+
+### Fechas no parseables
+
+La **Tabla 6** resume la frecuencia de fechas no parseables en variables clave.
+
+```{r}
+#| label: tab-date-parse
+if (nrow(date_parse_tbl) > 0) {
+  date_parse_tbl %>%
+    mutate(pct = round(pct, 3)) %>%
+    gt() %>%
+    tab_header(title = md("**Tabla 6. Registros con fechas no parseables**"))
+}
+```
+
+Los problemas de parseo son relativamente pocos en términos proporcionales, pero relevantes porque afectan variables temporalmente estratégicas. Cuando el problema recae sobre la fecha de diagnóstico, compromete la asignación al año de incidencia y el análisis de tendencia; cuando recae sobre la fecha de nacimiento, afecta la edad derivada; y cuando recae sobre defunción o último contacto, limita posibles análisis de seguimiento o supervivencia.
+
+La magnitud observada no sugiere un colapso de calidad temporal, pero sí justifica una fase adicional de recuperación de fechas a partir de los campos crudos. No se recomienda imputar fechas completas a partir de información débil; sí conviene rescatar formatos recuperables y marcar de manera explícita las fechas que permanezcan irresolubles.
+
+### Rango de años de diagnóstico y nacimiento
+
+La plausibilidad temporal se resume primero en la **Tabla 7** y luego, de manera más útil para el lector, en la **Tabla 8** y la **Figura 3**.
+
+```{r}
+#| label: tab-year-ranges
+bind_rows(
+  diag_year_range %>% mutate(variable = "fecdiag") %>% rename(min_year = min_year_diag, max_year = max_year_diag),
+  nac_year_range %>% mutate(variable = "fecnac") %>% rename(min_year = min_year_nac, max_year = max_year_nac)
+) %>%
+  select(variable, min_year, max_year) %>%
+  gt() %>%
+  tab_header(title = md("**Tabla 7. Rango observado de años derivados**"))
+```
+
+```{r}
+#| label: tab-year-plaus
+bind_rows(
+  diag_year_plaus_tbl %>% rename(categoria = periodo_diag) %>% mutate(variable = "fecdiag"),
+  nac_year_plaus_tbl %>% rename(categoria = periodo_nac) %>% mutate(variable = "fecnac")
+) %>%
+  select(variable, categoria, n) %>%
+  gt() %>%
+  tab_header(title = md("**Tabla 8. Distribución resumida de años plausibles y fuera de ventana**"))
+```
+
+```{r}
+#| label: fig-year-diag
+#| fig-cap: "Figura 3. Distribución de registros por año de diagnóstico derivado de `fecdiag`, restringida al rango 2010-2024 para mejorar legibilidad."
+if (nrow(diag_year_tbl) > 0) {
+  diag_year_tbl %>%
+    filter(!is.na(year_diag), year_diag >= 2010, year_diag <= 2024) %>%
+    ggplot(aes(x = year_diag, y = n)) +
+    geom_col() +
+    scale_x_continuous(breaks = seq(2010, 2024, by = 2)) +
+    labs(x = "Año de diagnóstico", y = "Número de registros") +
+    theme_minimal(base_size = 11)
+}
+```
+
+El rango de años observados funciona como un control de plausibilidad gruesa. En esta base aparecen valores claramente incompatibles con el marco temporal del estudio, sobre todo en fecha de nacimiento y en un subconjunto pequeño pero no trivial de fechas diagnósticas. Destaca, por ejemplo, la presencia de `r fmt_n(diag_year_plaus_tbl$n[diag_year_plaus_tbl$periodo_diag == "Después de 2022"])` registros con año de diagnóstico posterior a 2022 y `r fmt_n(diag_year_plaus_tbl$n[diag_year_plaus_tbl$periodo_diag == "Año faltante"])` sin año de diagnóstico derivable. En fecha de nacimiento también se observan extremos manifiestamente implausibles.
+
+El gráfico anual es más informativo cuando se restringe a un rango cercano al periodo de interés, ya que los valores extremos comprimen visualmente la serie central. Por ello, la figura se concentra en el entorno 2010-2024, mientras que la tabla conserva la información resumida sobre años fuera de ventana. Para el análisis principal de incidencia, conviene definir el periodo analítico con una regla transparente: conservar los valores originales en la base maestra, pero construir una variable analítica de año de diagnóstico que marque o excluya explícitamente los registros fuera de ventana.
+
+## Inconsistencias cronológicas entre diagnóstico y defunción
+
+La **Tabla 9** resume la magnitud y el desfase de los registros con diagnóstico posterior a defunción.
+
+```{r}
+#| label: tab-desfase
+bind_cols(tibble(registros_inconsistentes = nrow(inconsist_fecha)), desfase) %>%
+  mutate(across(everything(), ~ round(., 2))) %>%
+  gt() %>%
+  tab_header(title = md("**Tabla 9. Resumen de inconsistencias cronológicas: fecha de diagnóstico posterior a fecha de defunción**"))
+```
+
+La presencia de `r fmt_n(nrow(inconsist_fecha))` registros con `fecdiag > fecdef` constituye uno de los hallazgos más críticos del reporte. En principio, un diagnóstico no debería ocurrir después de la muerte, salvo situaciones muy específicas de certificación retrospectiva o reconstrucción post mortem, que de todos modos exigen reglas claras de codificación.
+
+En este caso, además, la magnitud del desfase no sugiere solamente errores pequeños de digitación. La mediana del desfase es extraordinariamente grande, lo que apunta a problemas más profundos, como años mal capturados, confusión entre tipos de fecha o errores de transformación durante la importación. Esto cambia la interpretación del problema: no se trata solo de registros levemente inconsistentes, sino de observaciones potencialmente muy distorsionadas en su secuencia temporal.
+
+Esta inconsistencia afecta directamente la asignación temporal del caso, la posibilidad de análisis de supervivencia y la plausibilidad clínica del episodio. Se sugiere marcar estos registros de forma explícita y revisar en primer término aquellos con mayores desfases. Para el análisis principal, la estrategia más robusta es excluir de análisis temporales sensibles aquellos registros que no puedan justificarse o corregirse con evidencia de fuente.
+
+## Calidad de codificación de sexo
+
+La **Tabla 10** resume la distribución observada de la variable sexo.
+
+```{r}
+#| label: tab-sexo
+sexo_tbl %>%
+  gt() %>%
+  tab_header(title = md("**Tabla 10. Distribución observada de la variable sexo**"))
+```
+
+La variable sexo presenta una codificación predominantemente numérica, lo que no es problemático en sí mismo, pero también exhibe valores perdidos y al menos un valor textual claramente anómalo. Este patrón suele reflejar procesos de importación en los que el sistema mezcla etiquetas, encabezados residuales o registros capturados fuera de estándar.
+
+Desde el punto de vista epidemiológico, el problema no es meramente estético. El sexo se usa en tabulados básicos, comparaciones entre grupos y controles de plausibilidad con el sitio tumoral. Una codificación heterogénea, si no se estandariza antes del análisis, puede fragmentar categorías, subestimar denominadores y generar errores silenciosos en filtros y agrupaciones. Por ello, en la capa analítica conviene crear una variable `sexo_std` con categorías únicas y trazables, preservando siempre el valor original.
+
+## Calidad de codificación de CIE-10
+
+### Códigos no estandarizados o atípicos
+
+La **Tabla 11** y la **Figura 4** resumen los principales códigos CIE-10 atípicos observados.
+
+```{r}
+#| label: tab-bad-cie10
+bad_cie10_tbl %>%
+  slice_head(n = 30) %>%
+  gt() %>%
+  tab_header(title = md("**Tabla 11. Principales códigos CIE-10 atípicos o fuera del patrón esperado**"))
+```
+
+```{r}
+#| label: fig-bad-cie10
+#| fig-cap: "Figura 4. Top 15 de códigos CIE-10 atípicos o fuera del patrón esperado."
+if (nrow(bad_cie10_tbl) > 0) {
+  bad_cie10_tbl %>%
+    slice_head(n = 15) %>%
+    mutate(cie10_std = fct_reorder(cie10_std, n)) %>%
+    ggplot(aes(x = n, y = cie10_std)) +
+    geom_col() +
+    labs(x = "Frecuencia", y = "Código") +
+    theme_minimal(base_size = 11)
+}
+```
+
+La revisión de los códigos CIE-10 revela que una fracción de los registros no sigue el patrón habitual de codificación oncológica. En esta evaluación se consideraron estructuralmente aceptables los códigos que inician con `C` seguido de dos dígitos y, además, `D00-D09`, dado que estos últimos corresponden a neoplasias in situ. Parte de las discrepancias observadas puede explicarse por variaciones menores de formato, pero otra parte parece corresponder a códigos no oncológicos o cadenas residuales procedentes del proceso de consolidación.
+
+Este hallazgo es sustantivamente relevante. En estudios de incidencia por sitio tumoral, la clasificación diagnóstica es la columna vertebral del análisis. Un código mal estandarizado puede producir errores de clasificación, subregistro aparente de ciertos sitios, sobrefragmentación de categorías o exclusiones equivocadas. La presencia repetida de códigos como `L53`, `S53`, `M53` y otros análogos sugiere, además, que puede existir un patrón de contaminación sistemática más que simples errores aislados.
+
+Se sugiere construir una clasificación explícita de tres niveles: código oncológico válido, código no oncológico y valor no interpretable. Esa clasificación debe quedar documentada en el pipeline analítico y detallada en un anexo para facilitar auditoría.
+
+## Verificaciones adicionales relevantes para registros de cáncer
+
+### Completitud conjunta de topografía y morfología
+
+La **Tabla 12** resume la completitud conjunta de topografía y morfología.
+
+```{r}
+#| label: tab-topo-morf-missing
+if (nrow(topo_morf_missing_tbl) > 0) {
+  topo_morf_missing_tbl %>%
+    mutate(across(everything(), ~ round(., 2))) %>%
+    gt() %>%
+    tab_header(title = md("**Tabla 12. Completitud conjunta de topografía y morfología**"))
+}
+```
+
+En registros de cáncer, la topografía y la morfología no son simples variables descriptivas; constituyen el núcleo de la caracterización oncológica del caso. Por ello, evaluar su completitud conjunta es más informativo que mirar cada campo por separado. En esta base, la gran mayoría de registros conserva ambos campos, lo cual es una fortaleza. No obstante, persiste un subconjunto con ausencia simultánea o parcial que puede limitar la capacidad de agrupar por sitio e histología.
+
+Se sugiere tratar esta dimensión como prioritaria en la construcción del dataset analítico final, especialmente si el objetivo es producir tablas por localización tumoral específica, morfología o combinaciones topografía-histología.
+
+### Concordancia entre morfología y comportamiento
+
+La **Tabla 13** presenta un control de concordancia estructural entre la variable de morfología y el campo separado de comportamiento.
+
+```{r}
+#| label: tab-morf-beh
+if (nrow(morf_beh_tbl) > 0) {
+  morf_beh_tbl %>%
+    mutate(across(everything(), ~ round(., 2))) %>%
+    gt() %>%
+    tab_header(title = md("**Tabla 13. Concordancia estructural entre morfología y comportamiento**"))
+}
+```
+
+En CIE-O, el comportamiento forma parte del código morfológico completo. Por ello, cuando existe una variable separada de comportamiento, una comparación básica entre el último dígito de la morfología y el campo de comportamiento puede revelar discordancias de codificación. Este control no reemplaza una auditoría oncológica completa, pero sí funciona como una señal rápida de posibles errores de digitación o armonización.
+
+Si la tabla aparece sin evaluación, ello probablemente indica que la variable disponible no permite una comparación estructural directa o que la codificación no quedó suficientemente armonizada en esta etapa. Aun así, mantener la sección resulta útil porque deja explícito que esta dimensión fue considerada y que merece una revisión más fina en una fase posterior.
+
+### Proxy estructural de verificación morfológica
+
+La **Tabla 14** presenta un proxy estructural de verificación morfológica a partir de la información disponible en `morf` y `base_dx`.
+
+```{r}
+#| label: tab-mv-like
+if (nrow(mv_like_tbl) > 0) {
+  mv_like_tbl %>%
+    mutate(across(everything(), ~ round(., 2))) %>%
+    gt() %>%
+    tab_header(title = md("**Tabla 14. Indicador proxy de verificación morfológica basado en estructura disponible**"))
+}
+```
+
+Los indicadores clásicos de verificación morfológica requieren una definición operativa precisa de la base diagnóstica. En ausencia de una depuración formal de esa variable, puede ser útil presentar un proxy estructural, por ejemplo la presencia de un código morfológico o categorías de base diagnóstica compatibles con confirmación histológica o citológica. Este indicador no debe reportarse como una métrica oficial equivalente a los estándares IARC/IACR, pero sí puede enriquecer la discusión sobre la solidez diagnóstica observable en la base.
+
+Se sugiere usarlo con prudencia y dejar explícito que se trata de una aproximación estructural preliminar.
+
+## Compatibilidad lógica entre sexo y sitio tumoral
+
+La **Tabla 15** resume controles lógicos básicos entre sexo y ciertos sitios tumorales cuya incompatibilidad biológica es alta.
+
+```{r}
+#| label: tab-site-sex
+site_sex_tbl %>%
+  gt() %>%
+  tab_header(title = md("**Tabla 15. Controles lógicos básicos entre sitio tumoral y sexo**"))
+```
+
+Estos controles no deben interpretarse como pruebas perfectas de error, pero sí como detectores rápidos de problemas de codificación o linkage. La presencia de próstata en mujeres o cérvix en hombres es difícilmente compatible con una codificación correcta y merece revisión. En cambio, mama en hombres es rara, pero no necesariamente errónea, por lo que no debe tratarse de forma automática como inconsistencia.
+
+Este tipo de evaluación es especialmente útil porque conecta estructura con plausibilidad clínica. Una base puede verse aceptable desde el punto de vista puramente computacional y, aun así, contener combinaciones biológicamente implausibles. Se sugiere mantener este tipo de chequeos dentro del pipeline rutinario de calidad.
+
+# Síntesis de problemas de calidad, criticidad e impacto
+
+La **Tabla 16** integra los principales problemas identificados, su criticidad relativa, su impacto esperado y una propuesta de manejo.
+
+```{r}
+#| label: tab-risk-matrix
+risk_matrix %>%
+  gt() %>%
+  tab_header(title = md("**Tabla 16. Matriz resumida de problemas de calidad, criticidad e impacto potencial**"))
+```
+
+Esta matriz resume la lógica de priorización del informe. La criticidad no depende solamente del tamaño del problema, sino de la medida en que este amenaza la validez de las inferencias. Así, una variable completamente vacía puede ser poco crítica si no participa en la pregunta analítica, mientras que un número relativamente pequeño de inconsistencias entre diagnóstico y defunción puede ser altamente crítico porque compromete la coherencia temporal de variables centrales. Del mismo modo, pocos códigos diagnósticos aberrantes pueden bastar para sesgar tabulados por sitio cuando se concentran en categorías poco frecuentes.
+
+# Implicancias para el análisis epidemiológico
+
+## Qué problemas son principalmente documentales
+
+No todo problema de calidad detectado en esta etapa implica sesgo severo. Algunas deficiencias reducen más bien la riqueza descriptiva o la interoperabilidad del dataset, sin alterar necesariamente las estimaciones principales. Aquí ubico sobre todo las variables completamente vacías o casi vacías que no cumplen un rol central en la definición del caso o en la pregunta analítica inmediata. Estas variables deben documentarse como debilidad del sistema, pero no necesariamente detienen el análisis.
+
+## Qué problemas sí pueden inducir sesgo
+
+En cambio, varios hallazgos sí tienen potencial de inducir sesgo o error sistemático: las fechas no parseables cuando afectan el año de diagnóstico o la edad derivada, la incoherencia entre diagnóstico y defunción, y la codificación irregular de CIE-10 cuando el objetivo es estimar frecuencia por localización tumoral. La dirección del sesgo dependerá del patrón subyacente. Si los errores están distribuidos de manera esencialmente aleatoria y en muy baja frecuencia, el efecto puede ser pequeño. Si se concentran por periodo, hoja de origen, institución o subtipo de caso, el riesgo de sesgo aumenta de forma considerable.
+
+## Qué supuestos sería razonable asumir
+
+Para avanzar con el análisis, considero defendibles los siguientes supuestos operativos:
+
+1. Que las variables completamente vacías no contienen información analíticamente recuperable para este estudio y, por tanto, su exclusión del análisis principal no introduce sesgo adicional, aunque sí limita la capacidad descriptiva.
+2. Que una fracción importante de las anomalías en sexo y CIE-10 es resoluble mediante estandarización determinística sin necesidad de imputación sustantiva.
+3. Que los casos con incoherencias temporales no deben corregirse por inferencia simple salvo evidencia adicional; por ello, la estrategia más conservadora es marcarlos y excluirlos de análisis temporales sensibles cuando la revisión no sea posible.
+4. Que, cuando exista concordancia razonable entre fechas, la edad derivada puede ser una representación analíticamente más robusta que la edad reportada.
+
+Estos supuestos son pragmáticos. Su aceptabilidad depende de que queden escritos, justificados y, cuando corresponda, acompañados por análisis de sensibilidad.
+
+# Recomendaciones para el manejo analítico de la base
+
+## Reglas sugeridas para la versión analítica
+
+Para la construcción de una capa analítica derivada se sugieren las siguientes reglas:
+
+- Conservar todas las variables originales sin sobrescritura.
+- Crear variables estandarizadas paralelas (`sexo_std`, `cie10_std`, `edad_calc`, `edad_final`, `flag_*`).
+- Reintentar el parseo de fechas a partir de los campos crudos antes de declarar un valor definitivamente faltante.
+- Marcar explícitamente los registros con `fecdiag > fecdef` y excluirlos del análisis principal si no se corrigen o justifican.
+- Priorizar una variable de edad derivada cuando `fecnac` y `fecdiag` sean plausibles y consistentes.
+- Clasificar los códigos CIE-10 en al menos tres grupos: oncológico válido, no oncológico y no interpretable.
+- Evaluar el uso de topografía y morfología como criterios mínimos de elegibilidad analítica en productos que dependan fuertemente de la clasificación tumoral.
+- Excluir variables completamente vacías o no operativas del modelo analítico principal, pero conservarlas en el archivo maestro.
+
+## Riesgos residuales aun después de limpiar
+
+Incluso tras la depuración, persistirán riesgos residuales. La estandarización de sexo y CIE-10 puede corregir forma, pero no siempre contenido. Una fecha bien parseada aún puede ser conceptualmente incorrecta. La edad derivada puede ser más consistente que la reportada, pero depende de que las fechas sean verdaderas. Y la ausencia casi total de ciertas variables no puede compensarse solo con limpieza. Por ello, la depuración no debe venderse como una solución total, sino como una estrategia de reducción de error, aumento de transparencia y mejora de la trazabilidad.
+
+# Recomendaciones para prevención futura
+
+## Mejoras en captura y diseño del sistema
+
+Desde una perspectiva de mejora continua del registro, varias de estas fallas son prevenibles con intervenciones relativamente concretas:
+
+- Validaciones de rango en el punto de entrada para edad y fechas.
+- Restricción de formatos de fecha con parseo controlado desde la interfaz.
+- Catálogos cerrados para sexo y otros campos categóricos.
+- Validaciones lógicas entre sexo y ciertos sitios diagnósticos de alta incompatibilidad biológica.
+- Diccionario de datos vivo que distinga campos obligatorios, opcionales, históricos y no implementados.
+- Rutinas periódicas de QC automatizado con retroalimentación a los equipos de captura.
+
+## Gobernanza de datos
+
+La prevención también requiere gobernanza, no solo reglas técnicas. Un campo vacío de manera crónica no es únicamente un problema de digitación; a menudo indica que el sistema no ha definido con claridad la relevancia operativa de esa variable, o que existe una brecha entre lo que el modelo de datos promete y lo que el flujo de trabajo realmente puede sostener. El fortalecimiento del registro exige alinear modelo conceptual, interfaz de captura, capacitación, monitoreo y uso analítico real de la información.
+
+# Análisis complementarios útiles para la interpretación y la auditoría
+
+Además de los hallazgos ya documentados, conviene presentar algunos análisis complementarios que enriquecen la evaluación estructural y orientan mejor las decisiones de depuración.
+
+## Calidad por hoja de origen
+
+La **Tabla 17** resume indicadores seleccionados de calidad por hoja de origen.
+
+```{r}
+#| label: tab-qc-by-sheet
+if (nrow(qc_by_sheet) > 0) {
+  qc_by_sheet %>%
+    mutate(across(-c(sheet_source, n), ~ round(., 2))) %>%
+    gt() %>%
+    tab_header(title = md("**Tabla 17. Indicadores seleccionados de calidad por hoja de origen**"))
+}
+```
+
+La revisión por hoja de origen no reemplaza la evaluación global, pero aporta contexto valioso. En la base actual, algunos patrones parecen concentrarse en pocas hojas, lo que sugiere problemas localizados de carga, migración o transformación. Llaman particularmente la atención las hojas con mayor porcentaje de años fuera de ventana y aquellas con mayor frecuencia de `fecdiag > fecdef` o de CIE-10 no estándar. Este hallazgo es importante porque indica que una parte del problema puede estar más asociada a procesos específicos de consolidación que a una mala calidad homogénea de todo el registro.
+
+Se sugiere priorizar la revisión de hojas con peor perfil temporal o diagnóstico, ya que esta estrategia puede ser más eficiente que una revisión aleatoria del archivo completo.
+
+## Perfil de multialertas por registro
+
+La **Tabla 18** muestra cuántas alertas estructurales se acumulan por registro.
+
+```{r}
+#| label: tab-record-profile
+if (nrow(qc_record_profile) > 0) {
+  qc_record_profile %>%
+    mutate(pct = round(pct, 2)) %>%
+    gt() %>%
+    tab_header(title = md("**Tabla 18. Número de alertas estructurales acumuladas por registro**"))
+}
+```
+
+Este resumen ayuda a calibrar mejor la magnitud real del problema. En la base actual, la gran mayoría de registros no acumula alertas estructurales relevantes, y una fracción menor concentra una o más anomalías. Este patrón sugiere que la estrategia más eficiente no necesariamente es una intervención masiva sobre todo el archivo, sino una depuración dirigida hacia el subconjunto de registros más problemáticos.
+
+Se sugiere incorporar este perfil en futuras rondas de QC porque mejora la priorización operativa y puede servir como criterio para revisión manual focalizada.
+
+# Conclusiones
+
+En conjunto, la base presenta una calidad estructural suficiente para avanzar hacia una fase de depuración analítica reproducible, pero no debe emplearse como si ya fuese un dataset final listo para análisis sustantivos. Sus fortalezas principales son la ausencia de duplicados exactos y de filas completamente vacías, así como la buena preservación conjunta de topografía y morfología en la mayoría de los registros. Sus debilidades más relevantes se concentran en la heterogeneidad de completitud entre variables, la presencia de fechas no parseables, las inconsistencias cronológicas entre diagnóstico y defunción, y la codificación irregular de sexo y CIE-10.
+
+Mi interpretación es que varios de estos problemas son resolubles mediante procesamiento determinístico y documentación cuidadosa. Sin embargo, algunos de ellos —en particular las inconsistencias temporales y los problemas de codificación diagnóstica— tienen suficiente importancia como para afectar de manera no trivial la validez de análisis por tiempo, sitio tumoral y estructura etaria si no se manejan explícitamente. Por ello, el siguiente paso metodológicamente correcto no es ignorar la calidad estructural, sino institucionalizar una capa derivada de limpieza con trazabilidad completa, criterios preespecificados y anexos de auditoría claramente vinculados al cuerpo principal del informe.
+
+# Anexos
+
+Los anexos que siguen cumplen una función de soporte y auditoría. No sustituyen la narrativa principal, pero permiten al lector revisar con mayor detalle patrones específicos sin sobrecargar el cuerpo del informe.
+
+## Anexo A. Missingness completo por variable
+
+```{r}
+#| label: anexo-missing-full
+missing_full %>%
+  mutate(pct_na = round(pct_na, 2)) %>%
+  gt() %>%
+  tab_header(title = md("**Anexo A. Missingness completo por variable**"))
+```
+
+## Anexo B. Distribución completa de discrepancias de edad
+
+```{r}
+#| label: anexo-age-diff-full
+if (nrow(age_diff_tbl) > 0) {
+  age_diff_tbl %>%
+    gt() %>%
+    tab_header(title = md("**Anexo B. Distribución completa de discrepancias entre edad reportada y edad derivada**"))
+}
+```
+
+## Anexo C. Lista completa de códigos CIE-10 atípicos
+
+```{r}
+#| label: anexo-bad-cie10-full
+bad_cie10_tbl %>%
+  gt() %>%
+  tab_header(title = md("**Anexo C. Lista completa de códigos CIE-10 atípicos o fuera del patrón esperado**"))
+```
+
+## Anexo D. Indicadores completos de calidad por hoja de origen
+
+```{r}
+#| label: anexo-qc-sheet-full
+if (nrow(qc_by_sheet) > 0) {
+  qc_by_sheet %>%
+    gt() %>%
+    tab_header(title = md("**Anexo D. Indicadores completos de calidad por hoja de origen**"))
+}
+```
+
+## Anexo E. Código opcional para construcción de variables analíticas derivadas
+
+```{r}
+#| label: code-derivadas-sugeridas
+#| eval: false
+
+dt_analytic <- dt_all %>%
+  mutate(
+    sexo_original = sexo,
+    sexo_std = sexo_std_fun(sexo),
+    cie10_original = cie10,
+    cie10_std = cie10_std_fun(cie10),
+    flag_cie10_nonstandard = !is.na(cie10_std) & cie10_std != "" & !str_detect(cie10_std, "^(C\\d{2}|D0[0-9])"),
+    flag_diag_gt_def = if_else(!is.na(fecdiag) & !is.na(fecdef) & fecdiag > fecdef, TRUE, FALSE, missing = FALSE),
+    edad_calc = if_else(!is.na(fecnac) & !is.na(fecdiag), floor(time_length(interval(fecnac, fecdiag), "years")), NA_real_),
+    flag_edad_diff_gt1 = if_else(!is.na(edad) & !is.na(edad_calc), abs(edad - edad_calc) > 1, FALSE, missing = FALSE),
+    edad_final = case_when(
+      !is.na(edad_calc) & !flag_edad_diff_gt1 ~ edad_calc,
+      !is.na(edad) ~ edad,
+      TRUE ~ NA_real_
+    )
+  )
+```
+
+

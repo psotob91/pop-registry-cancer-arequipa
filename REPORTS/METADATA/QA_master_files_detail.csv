@@ -1,0 +1,3 @@
+issue,variable,year,master,official,first_year_present,first_year_official,last_year_present,last_year_official,type_inconsistency,type_inconsistency_expected
+iarc_official_missing_in_variable_name_standard,multiple_primary,NA,NA,NA,NA,NA,NA,NA,NA,NA
+iarc_official_missing_in_variable_name_standard,residencia,NA,NA,NA,NA,NA,NA,NA,NA,NA

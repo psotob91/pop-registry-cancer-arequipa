@@ -1,0 +1,10 @@
+check,status
+Columnas requeridas en MASTER_DATA_DICTIONARY,TRUE
+Columnas requeridas en MASTER_VARIABLE_MAP,TRUE
+Cobertura exacta raw_name -> variable_name,TRUE
+Sin variables extra raw,TRUE
+Sin discrepancias de presencia anual,TRUE
+Sin discrepancias de first/last year,TRUE
+Conteo de variables por año coincide,TRUE
+Variables IARC oficiales representadas en variable_name_standard,FALSE
+Encabezados sospechosos documentados,TRUE

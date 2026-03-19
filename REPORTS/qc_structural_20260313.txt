@@ -1,0 +1,245 @@
+====================================
+REPORTE DE CALIDAD ESTRUCTURAL (QC)
+====================================
+
+Input: DATA/DERIVED/rcpa_arequipa_2015_2022_clean.rdsFecha: 2026-03-13
+Filas: 23225Cols : 71
+0) Missingness global (% NA por variable)
+
+- Variables con 100% NA:
+# A tibble: 2 × 2
+  variable pct_na
+  <chr>     <dbl>
+1 pmseq       100
+2 pmtot       100
+
+- Variables con >50% NA:
+# A tibble: 34 × 2
+   variable                   pct_na
+   <chr>                       <dbl>
+ 1 estcas                      100.0
+ 2 caso                        100.0
+ 3 pmcod                       100.0
+ 4 res                         100.0
+ 5 obsoleteflagpatienttable    100.0
+ 6 patientrecordid             100.0
+ 7 patientupdatedby            100.0
+ 8 patientupdatedate           100.0
+ 9 patientrecordstatus         100.0
+10 patientcheckstatus          100.0
+11 obsoleteflagtumourtable     100.0
+12 veri                        100.0
+13 busc                        100.0
+14 tumourupdatedby              99.9
+15 tumourunduplicationstatus    99.9
+16 notif                        99.9
+17 tumouridsourcetable          99.9
+18 patientrecordidtumourtable   99.8
+19 patientidtumourtable         99.6
+20 xnombre3                     99.5
+21 x673668                      99.1
+22 tumourid                     98.6
+23 sourcerecordid               96.6
+24 cicn                         86.3
+25 causa                        85.5
+26 fecdef                       81.3
+27 fecdef_raw                   81.3
+28 obs                          73.9
+29 tipoest                      72.1
+30 nx                           69.9
+31 tx                           68.1
+32 xnombre2                     67.6
+33 prof                         67.3
+34 mx                           62.2
+
+- Variables con >20% NA:
+# A tibble: 7 × 2
+  variable pct_na
+  <chr>     <dbl>
+1 estadio    40.2
+2 estvit     29.5
+3 tipo       27.5
+4 xape2      24.4
+5 xnombre1   24.4
+6 xape1      24.3
+7 nodoc      23.8
+
+1) Filas completamente vacías: 0
+2) Columnas completamente vacías: 2# A tibble: 2 × 2
+  variable all_na
+  <chr>    <lgl> 
+1 pmseq    TRUE  
+2 pmtot    TRUE  
+
+3) Filas duplicadas exactas: 0
+4) Registros con edad fuera de rango (<0 o >110): 8
+- Resumen edad (min/max/p01/p99):
+# A tibble: 1 × 4
+  min_edad max_edad   p01   p99
+     <int>    <int> <dbl> <dbl>
+1      -59     2017     6    90
+
+5) Fechas no parseables (tenían dato pero quedaron NA tras parseo)
+- fecdiag: 148  Top 15 strings:
+# A tibble: 15 × 2
+   fecdiag_raw             n
+   <chr>               <int>
+ 1 9/99/2023              32
+ 2 9/99/2022              29
+ 3 9/99/2024              17
+ 4 9/99/2019               6
+ 5 9/99/9999               5
+ 6 99/99/2024              4
+ 7 00/10/2022              3
+ 8 14/03/20218             3
+ 9 2018 OPERADO            3
+10 2021                    3
+11 28/02/2022 POR H CL     3
+12 29/02/2015              3
+13 9/99/2015               3
+14 9/99/2017               3
+15 99/01/2022              3
+
+- fecnac: 98  Top 15 strings:
+# A tibble: 15 × 2
+   fecnac_raw               n
+   <chr>                <int>
+ 1 2942                     3
+ 2 31/02/1972               3
+ 3 9604                     3
+ 4 NO TIENE                 3
+ 5 7520                     2
+ 6 9710                     2
+ 7 9780                     2
+ 8 9875                     2
+ 9 9930                     2
+10 SIN DATOS                2
+11 04/04/1958 24/6/1961     1
+12 28/017/2011              1
+13 2871                     1
+14 4311                     1
+15 5370                     1
+
+- fecdef: 17  Top 15 strings:
+# A tibble: 3 × 2
+  fecdef_raw                                     n
+  <chr>                                      <int>
+1 [1] VCE - Visto con Enfermedad                14
+2 [4] PVCE - Perdido de Vista con Enfermedad     2
+3 FECDEF                                         1
+
+- fuc: 6  Top 15 strings:
+# A tibble: 4 × 2
+  fuc_raw                 n
+  <chr>               <int>
+1 31/02/2019              3
+2 FUC                     1
+3 NO HAY REGISTRO         1
+4 NO REGISTRA CONTROL     1
+
+
+6) Diagnóstico posterior a defunción (fecdiag > fecdef): 353
+- Desfase (días) entre fecdiag y fecdef (solo inconsistentes):
+# A tibble: 1 × 4
+  min_days p50_days p95_days max_days
+     <int>    <int>    <dbl>    <int>
+1        1    42789   43686.   730350
+
+7) Rango de años de diagnóstico (fecdiag)
+# A tibble: 1 × 2
+  min_year_diag max_year_diag
+          <dbl>         <dbl>
+1          1919          2026
+
+- Conteo por año de diagnóstico (NA excluidos):
+# A tibble: 16 × 2
+   year_diag     n
+       <dbl> <int>
+ 1      1919     1
+ 2      1949     1
+ 3      1969     1
+ 4      2013     1
+ 5      2014    11
+ 6      2015  2606
+ 7      2016  3100
+ 8      2017  3294
+ 9      2018  2718
+10      2019  2181
+11      2020  1386
+12      2021  2520
+13      2022  2797
+14      2023  1124
+15      2024   578
+16      2026     1
+
+8) Rango de años de nacimiento (fecnac)
+# A tibble: 1 × 2
+  min_year_nac max_year_nac
+         <dbl>        <dbl>
+1         1039         2079
+
+9) Consistencia Edad reportada vs edad recalculada (fecnac→fecdiag)
+# A tibble: 1 × 5
+      n inconsistentes_gt1 pct_inconsistentes_gt1 inconsistentes_gt2 pct_inconsistentes_gt2
+  <int>              <int>                  <dbl>              <int>                  <dbl>
+1 22221               2155                   9.70               1480                   6.66
+
+- Top 10 diferencias más frecuentes (diff):
+# A tibble: 10 × 2
+    diff     n
+   <dbl> <int>
+ 1     0 17953
+ 2     1  2113
+ 3     2   675
+ 4     3   321
+ 5     6   208
+ 6     4   205
+ 7     5   200
+ 8     7   162
+ 9     8   110
+10     9    48
+
+10) Distribución de SEXO (incluye NA)
+# A tibble: 4 × 2
+  sexo      n
+  <chr> <int>
+1 2     15403
+2 1      7112
+3 <NA>    709
+4 SEXO      1
+
+11) CIE10: valores que NO parecen iniciar con 'C' + 2 dígitos (ej. C50)
+- Cantidad de códigos 'raros': 25# A tibble: 25 × 2
+   cie10     n
+   <chr> <int>
+ 1 c53.   2572
+ 2 s53.     56
+ 3 L53.     44
+ 4 l53.     36
+ 5 m53.     36
+ 6 N53.     26
+ 7 t53.     12
+ 8 M53.     10
+ 9 S53.      8
+10 o53.      8
+# ℹ 15 more rows
+# ℹ Use `print(n = ...)` to see more rows
+
+12) Incompatibilidades sitio-sexo (CIE10)
+- Próstata (C61) en F: 26- Cérvix (C53) en M: 69- Mama (C50) en M: 11 (no necesariamente error: raro pero posible)
+13) % missing en variables críticas para incidencia:
+# A tibble: 6 × 2
+  variable pct_na
+  <chr>     <dbl>
+1 res      100.0 
+2 fecdiag    3.90
+3 morf       3.67
+4 topo       3.30
+5 edad       3.08
+6 sexo       3.05
+
+14) Hallazgos/alertas automáticas (interpretación breve)
+- Variable 'pmseq' está 100% NA: no se puede caracterizar múltiples primarios con estos campos; confirmar si aplica en el registro/exportación.- Variable 'pmtot' está 100% NA: no se puede caracterizar múltiples primarios con estos campos; confirmar si aplica en el registro/exportación.- Hay 353 registros con fecdiag > fecdef: revisar reglas (diagnóstico post-mortem, error de digitación o fechas invertidas).
+====================================
+FIN REPORTE CALIDAD ESTRUCTURAL
+====================================

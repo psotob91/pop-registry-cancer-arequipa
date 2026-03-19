@@ -1,0 +1,37 @@
+{
+  "run_date": "2026-03-17",
+  "config": {
+    "promote_provisional_to_safe": false,
+    "top_n_cluster_examples": 5,
+    "cumulative_review_target": 0.95,
+    "similarity_threshold": 0.8,
+    "min_cluster_size": 2
+  },
+  "source_inputs": {
+    "harmonized_wide": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/DATA/DERIVED/rcpa_arequipa_2015_2022_harmonized_wide.rds",
+    "harmonized_long": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/DATA/DERIVED/rcpa_arequipa_2015_2022_harmonized_long.rds",
+    "harmonization_pending": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/REPORTS/harmonization_pending_semantic_review.csv",
+    "harmonization_dictionary": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/REPORTS/harmonization_dictionary.csv",
+    "local_unknown_codes_registry": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/REPORTS/local_unknown_codes_registry.csv",
+    "local_dictionary_base_diagnostico": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/REPORTS/local_dictionary_base_diagnostico.csv",
+    "local_dictionary_estado_vital": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/REPORTS/local_dictionary_estado_vital.csv",
+    "local_dictionary_lateralidad": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/REPORTS/local_dictionary_lateralidad.csv",
+    "local_dictionary_sexo": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/REPORTS/local_dictionary_sexo.csv"
+  },
+  "outputs": {
+    "semantic_dictionary_updates": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/REPORTS/SEMANTIC/semantic_dictionary_updates_20260317.csv",
+    "semantic_decision_log": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/REPORTS/SEMANTIC/semantic_decision_log_20260317.csv",
+    "local_unknown_codes_registry_updated": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/REPORTS/SEMANTIC/local_unknown_codes_registry_updated_20260317.csv",
+    "semantic_pattern_clusters": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/REPORTS/SEMANTIC/semantic_pattern_clusters_20260317.csv",
+    "semantic_value_profile": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/REPORTS/SEMANTIC/semantic_value_profile_20260317.csv",
+    "semantic_standardization_preview_long": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/REPORTS/SEMANTIC/semantic_standardization_preview_long_20260317.rds",
+    "summary_md": "C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa/REPORTS/SEMANTIC/semantic_standardization_summary_20260317.md"
+  },
+  "key_counts": {
+    "n_target_variables": 22,
+    "n_value_rows": 18266,
+    "n_auto_safe": 34,
+    "n_probable": 9,
+    "n_unknown": 18223
+  }
+}
