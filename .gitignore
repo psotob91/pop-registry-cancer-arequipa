@@ -1,37 +1,55 @@
 # ============================================================
-# 1. DATOS CRUDOS Y DERIVADOS (CRÍTICO)
+# 0. SECRETOS / CREDENCIALES
 # ============================================================
 
-# Todo lo que esté dentro de DATA
+.Renviron
+.Renviron*
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+credentials*
+token*
+tokens*
+auth*
+secrets*
+service-account*.json
+*secret*.json
+*token*.json
+
+# ============================================================
+# 1. DATOS CRUDOS Y DERIVADOS (NO PÚBLICOS)
+# ============================================================
+
 DATA/
-
-# (si en algún momento quieres versionar metadata dentro de DATA, se puede revertir selectivamente)
-
+data/
 
 # ============================================================
-# 2. ARCHIVOS DE DATOS (cualquier ubicación)
+# 2. TABULARES / BASES / DATOS (IGNORAR POR DEFECTO)
 # ============================================================
 
-# Tabulares
 *.csv
 *.tsv
 *.xlsx
 *.xls
 *.ods
-
-# Bases serializadas
 *.rds
 *.rda
 *.RData
 *.parquet
 *.feather
+*.fst
+*.qs
 
-# JSON (puede contener data sensible)
+# JSON: ignorar por defecto, luego abrir excepciones estructurales
 *.json
 
-
 # ============================================================
-# 3. DOCUMENTOS Y REPORTES (NO VERSIONAR OUTPUTS)
+# 3. OUTPUTS / REPORTES RENDERIZADOS
 # ============================================================
 
 *.pdf
@@ -42,20 +60,23 @@ DATA/
 *.pptm
 *.html
 
-# Carpetas de render de Quarto / RMarkdown
 *_files/
 .quarto/
-
+_cache/
+cache/
+.knit_cache/
+_site/
+_book/
 
 # ============================================================
-# 4. LOGS Y OUTPUTS INTERMEDIOS
+# 4. LOGS / TMP
 # ============================================================
 
 *.log
 *.tmp
 *.bak
 *.out
-
+*.err
 
 # ============================================================
 # 5. R / RSTUDIO
@@ -66,46 +87,117 @@ DATA/
 .Ruserdata
 .Rproj.user/
 
-
 # ============================================================
-# 6. SISTEMA OPERATIVO
+# 6. SISTEMA / ENTORNOS
 # ============================================================
 
 .DS_Store
 Thumbs.db
-
+desktop.ini
+.venv/
+venv/
+__pycache__/
+node_modules/
+renv/library/
+renv/staging/
+renv/python/
 
 # ============================================================
-# 7. EXCEPCIONES IMPORTANTES (MANTENER VERSIONADAS)
+# 7. EXCEPCIONES: CÓDIGO Y DOCUMENTACIÓN ESTRUCTURAL
 # ============================================================
 
-# Scripts
 !SCRIPTS/
+!SCRIPTS/**
+!R/
+!R/**
+!scripts/
+!scripts/**
+!src/
+!src/**
+!inst/
+!inst/**
 
-# Configuración de proyecto
 !*.Rproj
 !.gitignore
+!README.md
+!README.qmd
+!LICENSE
+!renv.lock
 
-# Documentación estructural (sin datos sensibles)
 !*.md
 !*.txt
+!*.yaml
+!*.yml
+!*.qmd
+!*.toml
+!*.ini
+!*.css
+!*.scss
 
-# REPORTS SOLO SI QUIERES VERSIONAR METADATA (OPCIONAL)
-# (puedes comentar esto si prefieres excluir todo REPORTS)
+# ============================================================
+# 8. EXCEPCIONES: MANIFIESTOS / METADATA ESTRUCTURAL
+# ============================================================
+
+!META_MANIFESTS/
+!META_MANIFESTS/**
+!metadata/
+!metadata/**
+!config/
+!config/**
+!inst/extdata/
+!inst/extdata/**
+
+# CSV maestros / metadata
+!META_MANIFESTS/*.csv
+!metadata/*.csv
+!metadata/**/*.csv
+!config/*.csv
+!config/**/*.csv
+!inst/extdata/*.csv
+!inst/extdata/**/*.csv
+
+# JSON/YAML estructurales
+!META_MANIFESTS/*.json
+!metadata/*.json
+!metadata/**/*.json
+!config/*.json
+!config/**/*.json
+!*.json
+!*.yaml
+!*.yml
+
+# ============================================================
+# 9. EXCEPCIONES ESPECÍFICAS DEL PROYECTO
+# ============================================================
+
+# Maestros esperados por scripts
+!DATA/DERIVED/METADATA/
+!DATA/DERIVED/METADATA/*.csv
+!REPORTS/METADATA/
+!REPORTS/METADATA/*.csv
+
+# Si agregas manifiestos de datos/código
+!MASTER_FILE_INDEX.csv
+!DATA_REGISTRY.csv
+!CODE_MANIFEST.csv
+
+# ============================================================
+# 10. REPORTS: NO subir CSV de outputs, salvo metadata estructural
+# ============================================================
+
 !REPORTS/
 REPORTS/*.csv
 REPORTS/*.json
 REPORTS/*.pdf
 REPORTS/*.html
+REPORTS/*.docx
+REPORTS/*.pptx
 REPORTS/*_files/
 
-# Mantener solo markdowns de reporte
 !REPORTS/*.md
+!REPORTS/*.qmd
+!REPORTS/*.txt
 !REPORTS/METADATA/
-!REPORTS/METADATA/*.md
-!tree_project.txt
-
-# ============================================================
-# 8. OTROS ESPECIALES
-# ============================================================
-arbol-estructura.R
+!REPORTS/METADATA/**
+!REPORTS/SPECS/
+!REPORTS/SPECS/**
