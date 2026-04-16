@@ -1,0 +1,19 @@
+age_group_iarc,weight,weight_label,standard_population,notes
+0-4,12000,12.0,segi_doll_world_standard,CI5/IARC world standard
+5-9,10000,10.0,segi_doll_world_standard,CI5/IARC world standard
+10-14,9000,9.0,segi_doll_world_standard,CI5/IARC world standard
+15-19,9000,9.0,segi_doll_world_standard,CI5/IARC world standard
+20-24,8000,8.0,segi_doll_world_standard,CI5/IARC world standard
+25-29,8000,8.0,segi_doll_world_standard,CI5/IARC world standard
+30-34,6000,6.0,segi_doll_world_standard,CI5/IARC world standard
+35-39,6000,6.0,segi_doll_world_standard,CI5/IARC world standard
+40-44,6000,6.0,segi_doll_world_standard,CI5/IARC world standard
+45-49,6000,6.0,segi_doll_world_standard,CI5/IARC world standard
+50-54,5000,5.0,segi_doll_world_standard,CI5/IARC world standard
+55-59,4000,4.0,segi_doll_world_standard,CI5/IARC world standard
+60-64,4000,4.0,segi_doll_world_standard,CI5/IARC world standard
+65-69,3000,3.0,segi_doll_world_standard,CI5/IARC world standard
+70-74,2000,2.0,segi_doll_world_standard,CI5/IARC world standard
+75-79,1000,1.0,segi_doll_world_standard,CI5/IARC world standard
+80-84,500,0.5,segi_doll_world_standard,CI5/IARC world standard
+85+,500,0.5,segi_doll_world_standard,CI5/IARC world standard

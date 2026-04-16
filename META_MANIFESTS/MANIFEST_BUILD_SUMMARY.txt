@@ -1,0 +1,7 @@
+PROJECT MANIFESTS GENERATED
+ROOT_RPROJ: C:/Users/Usuario/OneDrive/Consultorias_Personales/Fundacion_City_Cancer/pop-registry-cancer-arequipa
+GENERATED_AT: 2026-03-19 23:30:33
+
+MASTER_FILE_INDEX.csv: 39 registros
+DATA_REGISTRY.csv: 118 registros
+PROJECT_SOURCE_PRIORITY.csv: 3 reglas

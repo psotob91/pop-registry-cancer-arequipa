@@ -1,0 +1,206 @@
+# Population-Based Cancer Registry – Arequipa, Perú (2015–2022)
+
+
+- [1. Background](#1-background)
+- [2. Objectives](#2-objectives)
+  - [General Objective](#general-objective)
+  - [Specific Objectives](#specific-objectives)
+- [3. Data Sources and Structure](#3-data-sources-and-structure)
+- [4. Methods](#4-methods)
+  - [4.1 Conceptual Framework](#41-conceptual-framework)
+  - [4.2 Pipeline Overview](#42-pipeline-overview)
+    - [Phase 1: Raw Data Audit](#phase-1-raw-data-audit)
+    - [Phase 2: Harmonization](#phase-2-harmonization)
+    - [Phase 3: Semantic Recoding](#phase-3-semantic-recoding)
+    - [Phase 4: Semantic Dictionary](#phase-4-semantic-dictionary)
+  - [4.3 Structural Quality
+    Indicators](#43-structural-quality-indicators)
+  - [4.4 Epidemiological Quality
+    Indicators](#44-epidemiological-quality-indicators)
+- [5. Reproducibility](#5-reproducibility)
+- [6. Data Governance](#6-data-governance)
+- [7. Interpretation Framework](#7-interpretation-framework)
+- [8. Limitations](#8-limitations)
+- [9. Conclusions](#9-conclusions)
+- [10. Author](#10-author)
+
+# 1. Background
+
+Population-based cancer registries (PBCRs) are essential for monitoring
+cancer burden, guiding policy, and evaluating control strategies.
+High-quality data are required to ensure valid estimates of incidence,
+survival, and mortality.
+
+The Arequipa PBCR (2015–2022) represents a heterogeneous multi-source
+dataset requiring systematic reconstruction, harmonization, and quality
+evaluation.
+
+This document describes a reproducible pipeline aligned with
+international standards for registry data processing and quality
+assessment.
+
+------------------------------------------------------------------------
+
+# 2. Objectives
+
+## General Objective
+
+To reconstruct, harmonize, and evaluate the structural and
+epidemiological quality of the Arequipa PBCR dataset (2015–2022).
+
+## Specific Objectives
+
+- Standardize variables across years
+- Build reproducible data dictionaries and crosswalks
+- Assess structural data quality
+- Evaluate epidemiological quality indicators
+- Document all transformation decisions
+
+------------------------------------------------------------------------
+
+# 3. Data Sources and Structure
+
+The dataset consists of annual registry extracts (2015–2022) with:
+
+- Variable naming inconsistencies
+- Heterogeneous formats
+- Partial missingness
+- Variable availability differences across years
+
+Data are not included in this repository due to confidentiality
+constraints.
+
+------------------------------------------------------------------------
+
+# 4. Methods
+
+## 4.1 Conceptual Framework
+
+Data quality is evaluated along the data-generating process:
+
+- Measurement → measurement error
+- Registration → coverage error
+- Selection → selection bias
+
+Each stage introduces distinct sources of bias.
+
+------------------------------------------------------------------------
+
+## 4.2 Pipeline Overview
+
+### Phase 1: Raw Data Audit
+
+- Identification of variables per year
+- Construction of dictionaries
+- Cross-year comparison
+
+### Phase 2: Harmonization
+
+- Standardization of variable names
+- Format alignment
+- Construction of harmonized datasets
+
+### Phase 3: Semantic Recoding
+
+- Recoding of key variables:
+  - Sex
+  - Vital status
+  - Basis of diagnosis
+- Identification of unknown and inconsistent values
+
+### Phase 4: Semantic Dictionary
+
+- Documentation of:
+  - Recoding rules
+  - Ambiguities
+  - Manual decisions
+
+------------------------------------------------------------------------
+
+## 4.3 Structural Quality Indicators
+
+- Variable presence across years
+- Missingness patterns
+- Data type consistency
+- Field completeness
+
+------------------------------------------------------------------------
+
+## 4.4 Epidemiological Quality Indicators
+
+Indicators evaluated according to international standards:
+
+- Microscopically verified cases (MV%)
+- Death certificate only (DCO%)
+- Primary site unknown (PSU%)
+- Missing age and sex
+- Basis of diagnosis distribution
+
+------------------------------------------------------------------------
+
+# 5. Reproducibility
+
+The full pipeline is implemented in R using a modular structure:
+
+``` r
+source("SCRIPTS/00_audit_raw_dictionary.R")
+source("SCRIPTS/01_build_harmonization_pipeline.R")
+source("SCRIPTS/02_semantic_recoding_and_domain_profiling.R")
+source("SCRIPTS/03_semantic_dictionary_building.R")
+```
+
+------------------------------------------------------------------------
+
+# 6. Data Governance
+
+This repository follows strict data protection principles:
+
+- No raw or individual-level data
+- No identifiable information
+- Only metadata and reproducible code
+
+------------------------------------------------------------------------
+
+# 7. Interpretation Framework
+
+Quality indicators are interpreted considering:
+
+- Internal consistency
+- Temporal stability
+- Plausibility relative to expected registry patterns
+
+Zero values (e.g., MV% = 0 or DCO% = 0) are interpreted cautiously, as
+they may reflect:
+
+- Data incompleteness
+- Coding artifacts
+- Structural issues in data capture
+
+------------------------------------------------------------------------
+
+# 8. Limitations
+
+- Lack of access to original data collection processes
+- Potential undocumented transformations in source files
+- Inability to externally validate certain indicators
+
+------------------------------------------------------------------------
+
+# 9. Conclusions
+
+This pipeline enables:
+
+- Transparent reconstruction of registry data
+- Systematic identification of structural issues
+- Epidemiological quality assessment aligned with international
+  standards
+
+The approach is designed for iterative refinement and can support future
+improvements in registry data systems.
+
+------------------------------------------------------------------------
+
+# 10. Author
+
+Percy Soto Becerra  
+MD, Epidemiologist, Data Scientist

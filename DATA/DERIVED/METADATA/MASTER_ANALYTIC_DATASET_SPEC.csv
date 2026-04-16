@@ -1,0 +1,40 @@
+analytic_variable,source_variable,source_priority,transformation_rule,coding_rule,missing_rule,unknown_rule,inclusion_rule,exclusion_rule,output_type,used_for_incidence,used_for_mortality,used_for_quality_indicators,comments
+record_id,row_id,high,preserve,unique row id from harmonized_wide,none,none,all,none,integer,1,1,1,Internal key only
+source_year,source_year,high,preserve,sheet year,none,none,all,none,integer,1,1,1,Audit provenance
+incident_year,fecha_diagnostico,high,parse date then extract year,calendar year of diagnosis,missing_if_unparseable,unknown_not_applicable,all,none,integer,1,0,0,Main denominator alignment variable
+sex_code_local,sexo,high,preserve raw,local sex code,keep_raw,unknown_if_not_mapped,all,none,character,1,1,1,Raw retained
+sex_analytic,sexo,high,join MASTER_VALUE_DICTIONARY on variable_family=sexo,male/female/unknown,unknown,unknown,all,none,factor,1,1,1,Primary stratifier
+age_raw,edad,high,preserve raw,raw age field,keep_raw,unknown_if_nonparseable,all,none,character,0,0,1,Retain for audit
+age_numeric,edad,high,parse numeric,years,missing_if_nonparseable,unknown_if_local_unknown_code,all,none,numeric,1,1,1,Use for grouping
+age_group_iarc,age_numeric,derived,apply MASTER_AGE_GROUP_RULES where scheme_id=AGE_001,IARC quinquennial,missing_if_age_missing,unknown_if_age_missing,all,none,factor,1,1,0,Use for rates
+age_group_broad,age_numeric,derived,apply MASTER_AGE_GROUP_RULES where scheme_id=AGE_002,broad reporting groups,missing_if_age_missing,unknown_if_age_missing,all,none,factor,0,0,1,Use for charts and tables
+topography_icdo,topografia_icdo,high,preserve trimmed uppercase,ICD-O topography,missing,unknown_if_local_unknown_code,all,none,character,1,1,1,Future PSU logic may depend on this
+morphology_icdo,morfologia_icdo,high,preserve trimmed uppercase,ICD-O morphology,missing,unknown_if_local_unknown_code,all,none,character,1,1,1,MV logic may depend on this
+basis_of_diagnosis_code_local,base_diagnostico,high,preserve raw,local code 0-10,missing,unknown_if_10_or_unmapped,all,none,character,1,0,1,Core QC variable
+basis_of_diagnosis_group,base_diagnostico,derived,join MASTER_VALUE_DICTIONARY on variable_family=base_diagnostico,dco/non_microscopic/microscopic_verification/autopsy/unknown,unknown,unknown,all,none,factor,1,0,1,Use for MV DCO and tables
+vital_status_code_local,estado_vital,high,preserve raw,local vital code,missing,unknown_if_unmapped,all,none,character,0,1,1,Raw retained
+vital_status_analytic,estado_vital,high,join MASTER_VALUE_DICTIONARY on variable_family=estado_vital,alive/dead/unknown_or_unresolved,unknown,unknown,all,none,factor,0,1,1,Use with dates
+date_of_death_raw,fecha_muerte,high,preserve raw,raw death date,keep_raw,not_applicable,all,none,character,0,0,1,Audit
+date_of_death,fecha_muerte,high,parse mixed date,parsed date,missing_if_unparseable,not_applicable,all,none,date,0,1,1,Vital consistency
+date_last_contact_raw,fecha_ultimo_contacto,high,preserve raw,raw last contact,keep_raw,not_applicable,all,none,character,0,0,1,Audit
+date_last_contact,fecha_ultimo_contacto,high,parse mixed date,parsed date,missing_if_unparseable,not_applicable,all,none,date,0,0,1,Vital consistency
+laterality_code_local,lateralidad,high,preserve raw,local code,missing,unknown_if_unmapped,all,none,character,0,0,1,Raw retained
+laterality_analytic,lateralidad,high,join MASTER_VALUE_DICTIONARY on variable_family=lateralidad,right/left/bilateral/other_or_not_stated/unknown,unknown,unknown,all,none,factor,0,0,1,Site-specific only
+residence_provdist_raw,residencia__provdist,high,preserve raw,raw geographic field,keep_raw,unknown,all,none,character,0,0,1,Residence family raw
+residence_res_raw,residencia__res,high,preserve raw,raw geographic field,keep_raw,unknown,all,none,character,0,0,1,Residence family raw
+residence_deptres_raw,residencia__deptres,high,preserve raw,raw geographic field,keep_raw,unknown,all,none,character,0,0,1,Residence family raw
+residence_analytic_area,residencia_family,derived,apply MASTER_RESIDENCE_RULES hierarchy,resident/nonresident/unknown in analytic scope,unknown,unknown,all,none,factor,1,0,1,Main inclusion variable for incidence
+analytic_inclusion_incidence,residence_analytic_area,derived,resident => yes; else no,yes/no,no,no,all,none,logical,1,0,1,Exclusion is analytic not row deletion
+flag_mv_candidate,basis_of_diagnosis_code_local,derived,apply MASTER_ANALYTIC_FLAGS_RULES,binary,false,false,all,none,logical,0,0,1,QC indicator component
+flag_dco_candidate,basis_of_diagnosis_code_local,derived,apply MASTER_ANALYTIC_FLAGS_RULES,binary,false,false,all,none,logical,0,0,1,QC indicator component
+flag_vital_inconsistency,vital_status_analytic|date_of_death|date_last_contact,derived,apply MASTER_ANALYTIC_FLAGS_RULES,binary,false,false,all,none,logical,0,0,1,QC indicator component
+flag_residence_unknown,residence_analytic_area,derived,apply MASTER_ANALYTIC_FLAGS_RULES,binary,false,false,all,none,logical,0,0,1,QC indicator component
+flag_age_unknown,age_numeric,derived,apply MASTER_ANALYTIC_FLAGS_RULES,binary,false,false,all,none,logical,0,0,1,QC indicator component
+flag_sex_unknown,sex_analytic,derived,apply MASTER_ANALYTIC_FLAGS_RULES,binary,false,false,all,none,logical,0,0,1,QC indicator component
+death_year,fecha_muerte,derived,extract year from parsed death date,calendar year of death,missing_if_unparseable,not_applicable,all,none,integer,0,1,1,Main denominator alignment variable for mortality
+death_event_official,fecha_muerte,derived,non-missing parsed fecha_muerte => TRUE,binary official death event,false,false,all,none,logical,0,1,1,Primary evidence of registered death event
+death_event_combined,fecha_muerte|estado_vital,derived,fecha_muerte present OR vital_status_analytic == dead,binary combined death signal,false,false,all,none,logical,0,1,1,Sensitivity-only combined audit signal
+analytic_inclusion_mortality,residence_analytic_area|death_year,derived,resident with usable death_year => yes; unresolved => unknown,yes/no/unknown,no,no,all,none,logical,0,1,1,Exclusion is analytic for mortality module
+flag_mortality_exclusion_nonresident,analytic_inclusion_mortality,derived,apply MASTER_ANALYTIC_FLAGS_RULES,binary,false,false,all,none,logical,0,0,1,QC indicator component for mortality scope
+flag_mortality_missing_death_year,death_year|vital_status_analytic,derived,apply MASTER_ANALYTIC_FLAGS_RULES,binary,false,false,all,none,logical,0,0,1,QC indicator component for mortality usability
+flag_vital_date_conflict,vital_status_analytic|fecha_muerte,derived,apply MASTER_ANALYTIC_FLAGS_RULES,binary,false,false,all,none,logical,0,0,1,QC indicator component for discordance between vital status and death date

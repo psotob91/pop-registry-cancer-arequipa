@@ -1,0 +1,28 @@
+project:
+  type: website
+  output-dir: ../portal_rcbpa
+
+lang: es
+
+website:
+  title: "RCBPA Arequipa"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Inicio
+      - href: pages/qc.qmd
+        text: QC
+      - href: pages/poblacion.qmd
+        text: Poblacion
+      - href: pages/incidencia.qmd
+        text: Incidencia
+      - href: pages/mortalidad.qmd
+        text: Mortalidad
+      - href: pages/trazabilidad.qmd
+        text: Trazabilidad
+
+format:
+  html:
+    theme: cosmo
+    css: assets/portal.css
+    toc: true

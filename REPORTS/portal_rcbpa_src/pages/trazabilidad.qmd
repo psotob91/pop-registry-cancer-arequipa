@@ -1,0 +1,20 @@
+---
+title: "Trazabilidad"
+---
+
+```{r}
+library(tidyverse)
+library(fs)
+root <- normalizePath("..\\..\\..", winslash = "/", mustWork = TRUE)
+read_csv_safe <- function(...) readr::read_csv(fs::path(root, ...), show_col_types = FALSE)
+preflight <- read_csv_safe("REPORTS","preflight_checks.csv")
+baseline <- list.files(fs::path(root, "REPORTS"), pattern = "baseline_contract_comparison.*\\.csv$", full.names = TRUE)
+```
+
+```{r}
+preflight %>% knitr::kable()
+```
+
+```{r}
+tibble(archivo = baseline) %>% knitr::kable()
+```

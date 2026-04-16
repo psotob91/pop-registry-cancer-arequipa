@@ -1,0 +1,13 @@
+profiles:
+  full:
+    description: "Pipeline completo: reconstruccion, tasas y portal"
+    include_columns:
+      - profile_full
+  core:
+    description: "Reconstruccion y tablas canonicas sin render editorial"
+    include_columns:
+      - profile_core
+  reports:
+    description: "Auditoria editorial, portal y comparacion baseline"
+    include_columns:
+      - profile_reports

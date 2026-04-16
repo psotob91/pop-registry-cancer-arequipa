@@ -1,0 +1,25 @@
+---
+title: "QC"
+---
+
+```{r}
+library(tidyverse)
+library(fs)
+root <- normalizePath("..\\..\\..", winslash = "/", mustWork = TRUE)
+read_csv_safe <- function(...) readr::read_csv(fs::path(root, ...), show_col_types = FALSE)
+qc_reg <- read_csv_safe("DATA","DERIVED","QC","qc_registry_indicators.csv")
+qc_rates <- read_csv_safe("DATA","DERIVED","QC","qc_rates_consistency.csv")
+qc_mortality_trace <- read_csv_safe("DATA","DERIVED","QC","qc_mortality_traceability_by_year.csv")
+```
+
+```{r}
+qc_reg %>% knitr::kable()
+```
+
+```{r}
+qc_rates %>% knitr::kable()
+```
+
+```{r}
+qc_mortality_trace %>% knitr::kable()
+```

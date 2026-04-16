@@ -1,0 +1,25 @@
+---
+title: "Incidencia"
+---
+
+```{r}
+library(tidyverse)
+library(fs)
+root <- normalizePath("..\\..\\..", winslash = "/", mustWork = TRUE)
+read_csv_safe <- function(...) readr::read_csv(fs::path(root, ...), show_col_types = FALSE)
+asr <- read_csv_safe("DATA","DERIVED","RATES","incidence_rates_asr_period.csv")
+annual <- read_csv_safe("DATA","DERIVED","RATES","incidence_rates_crude_annual.csv")
+top10 <- read_csv_safe("DATA","DERIVED","RATES","incidence_rates_top10_by_sex_period.csv")
+```
+
+```{r}
+asr %>% knitr::kable()
+```
+
+```{r}
+annual %>% knitr::kable()
+```
+
+```{r}
+top10 %>% knitr::kable()
+```

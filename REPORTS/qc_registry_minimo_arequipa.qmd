@@ -1,0 +1,582 @@
+---
+title: "Registro Poblacional de Cáncer de Arequipa 2015–2022"
+subtitle: "Informe mínimo de calidad epidemiológica del registro"
+author: "Consultor Percy Soto Becerra"
+lang: es
+format:
+  # html:
+  #   toc: true
+  #   number-sections: true
+  #   df-print: paged
+  pdf: 
+    toc: true
+    number-sections: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+library(tidyverse)
+library(readr)
+library(knitr)
+library(kableExtra)
+library(fs)
+library(scales)
+library(here)
+
+find_project_root <- function(start = getwd(), max_up = 8L) {
+  current <- normalizePath(start, winslash = "/", mustWork = TRUE)
+
+  has_project_markers <- function(path) {
+    fs::dir_exists(fs::path(path, ".git")) ||
+      fs::file_exists(fs::path(path, "META_MANIFESTS", "MASTER_FILE_INDEX.csv")) ||
+      fs::file_exists(fs::path(path, "DATA", "DERIVED", "METADATA", "MASTER_ANALYTIC_DATASET_SPEC.csv"))
+  }
+
+  for (i in 0:max_up) {
+    if (has_project_markers(current)) return(current)
+    parent <- fs::path_dir(current)
+    if (identical(parent, current)) break
+    current <- parent
+  }
+
+  normalizePath(start, winslash = "/", mustWork = TRUE)
+}
+
+read_qc_safe <- function(path_qc_data, file, col_types = NULL) {
+  full_path <- fs::path(path_qc_data, file)
+  if (!file.exists(full_path)) {
+    stop(paste0("No existe el archivo QC requerido: ", full_path), call. = FALSE)
+  }
+
+  if (is.null(col_types)) {
+    readr::read_csv(full_path, show_col_types = FALSE)
+  } else {
+    readr::read_csv(full_path, show_col_types = FALSE, col_types = col_types)
+  }
+}
+
+project_root <- find_project_root()
+
+path_analytic <- fs::path(
+  project_root, "DATA", "DERIVED", "ANALYTIC",
+  "rcpa_arequipa_2015_2022_analytic_dataset.rds"
+)
+
+path_qc_data <- fs::path(project_root, "DATA", "DERIVED", "QC")
+
+if (!file.exists(path_analytic)) {
+  stop(
+    paste(
+      "No se encontró el dataset analítico en:",
+      path_analytic
+    ),
+    call. = FALSE
+  )
+}
+
+if (!dir.exists(path_qc_data)) {
+  stop(
+    paste(
+      "No se encontró el directorio QC en:",
+      path_qc_data
+    ),
+    call. = FALSE
+  )
+}
+
+df <- readRDS(path_analytic) %>% as_tibble()
+
+qc_structure_summary <- read_qc_safe(path_qc_data, "qc_structure_summary.csv")
+qc_missing_core <- read_qc_safe(path_qc_data, "qc_missing_core.csv")
+qc_registry_indicators <- read_qc_safe(path_qc_data, "qc_registry_indicators.csv")
+qc_registry_indicators_by_year <- read_qc_safe(path_qc_data, "qc_registry_indicators_by_year.csv")
+qc_missing_core_by_year <- read_qc_safe(path_qc_data, "qc_missing_core_by_year.csv")
+qc_basis_group_by_year <- read_qc_safe(path_qc_data, "qc_basis_group_by_year.csv")
+qc_top10_topography_incidence <- read_qc_safe(
+  path_qc_data,
+  "qc_top10_topography_incidence.csv",
+  col_types = cols(qc_topography_group = col_character())
+)
+
+# Derivados robustos
+n_total <- qc_structure_summary$n_total[1]
+n_included <- qc_structure_summary$n_incidence_yes[1]
+n_excluded <- qc_structure_summary$n_incidence_no[1]
+n_unknown <- qc_structure_summary$n_incidence_unknown[1]
+pct_included <- n_included / n_total
+
+# Intentar crear df_included de forma tolerante
+if ("analytic_inclusion_incidence" %in% names(df)) {
+  df_included <- df %>% filter(analytic_inclusion_incidence == 1)
+} else if ("analytic_inclusion" %in% names(df)) {
+  df_included <- df %>% filter(analytic_inclusion == 1)
+} else {
+  df_included <- df
+}
+
+# Códigos de base diagnóstica local
+mv_codes <- c(6, 7, 8, 9)
+dco_code <- 0
+unknown_code <- 10
+
+# Versión limpia de tablas por año
+qc_registry_indicators_by_year_clean <- qc_registry_indicators_by_year %>%
+  filter(!is.na(qc_year), qc_year != "")
+
+qc_missing_core_by_year_clean <- qc_missing_core_by_year %>%
+  filter(!is.na(qc_year), qc_year != "")
+
+qc_basis_group_by_year_clean <- qc_basis_group_by_year %>%
+  filter(!is.na(qc_year), qc_year != "")
+
+qc_indicators_table <- tibble(
+  Indicador = c(
+    "Verificación microscópica (MV%)",
+    "Casos DCO (DCO%)",
+    "PSU (proxy)"
+  ),
+  Total = c(
+    qc_registry_indicators %>% filter(indicator == "mv_candidate_pct_all_records") %>% pull(percent) / 100,
+    qc_registry_indicators %>% filter(indicator == "dco_candidate_pct_all_records") %>% pull(percent) / 100,
+    qc_registry_indicators %>% filter(indicator == "psu_candidate_pct_all_records") %>% pull(percent) / 100
+  ),
+  Incidencia = c(
+    qc_registry_indicators %>% filter(indicator == "mv_candidate_pct_incidence_included") %>% pull(percent) / 100,
+    qc_registry_indicators %>% filter(indicator == "dco_candidate_pct_incidence_included") %>% pull(percent) / 100,
+    qc_registry_indicators %>% filter(indicator == "psu_candidate_pct_incidence_included") %>% pull(percent) / 100
+  )
+)
+
+mv_included <- qc_indicators_table %>% filter(Indicador == "Verificación microscópica (MV%)") %>% pull(Incidencia)
+dco_included <- qc_indicators_table %>% filter(Indicador == "Casos DCO (DCO%)") %>% pull(Incidencia)
+psu_included <- qc_indicators_table %>% filter(Indicador == "PSU (proxy)") %>% pull(Incidencia)
+
+unknown_bd_included <- qc_missing_core %>%
+  filter(indicator == "basis_unknown_or_missing") %>%
+  pull(percent) / 100
+```
+
+# RESUMEN EJECUTIVO
+
+Este informe presenta una evaluación de la calidad epidemiológica del Registro Poblacional de Cáncer de Arequipa para el periodo 2015–2022, con el objetivo de determinar su aptitud para la estimación de incidencia poblacional.
+
+El registro incluyó un total de `r comma(n_total)` registros, de los cuales `r comma(n_included)` (`r percent(pct_included, accuracy = 0.1)`) fueron considerados elegibles para análisis de incidencia bajo reglas analíticas predefinidas orientadas a preservar la validez epidemiológica.
+
+En términos de validez diagnóstica, la proporción de casos con verificación microscópica fue de `r percent(mv_included, accuracy = 0.1)`, mientras que la proporción de casos identificados únicamente mediante certificado de defunción fue de `r percent(dco_included, accuracy = 0.1)`. Este patrón es compatible con una adecuada calidad diagnóstica y una contribución limitada de fuentes pasivas dentro del universo analítico.
+
+Las variables estructurales fundamentales —sexo, edad y localización tumoral— presentan alta completitud, lo que favorece la estabilidad de las estimaciones específicas y la construcción de denominadores analíticos consistentes.
+
+No obstante, se identifican limitaciones relevantes. La proporción de casos con soporte diagnóstico limitado o insuficientemente documentado (PSU ≈ `r percent(psu_included, accuracy = 0.1)`) introduce incertidumbre en la clasificación de algunos casos. Asimismo, se observaron problemas en la calidad de variables como base diagnóstica, estado vital y residencia, así como heterogeneidad temporal en los indicadores evaluados.
+
+Estas limitaciones no comprometen de manera sustantiva la estimación de incidencia global, pero pueden afectar la validez de análisis estratificados y la comparabilidad temporal, particularmente cuando se evalúan diferencias de pequeña magnitud. Además, restringen el uso del registro para análisis que dependen críticamente del seguimiento de los casos, como la mortalidad o la supervivencia.
+
+En conjunto, el registro presenta condiciones compatibles con la estimación de incidencia poblacional bajo un marco analítico explícito, aunque requiere una interpretación cuidadosa de los resultados y una consideración sistemática de las limitaciones identificadas.
+
+
+# INTRODUCCIÓN
+
+Los registros poblacionales de cáncer constituyen la principal fuente para la estimación de la incidencia y la vigilancia epidemiológica del cáncer en una población definida. La validez de estas estimaciones depende no solo de la cobertura en la captación de casos, sino también de la calidad diagnóstica, la completitud de las variables esenciales y la consistencia interna de la información registrada.
+
+En este contexto, la evaluación de la calidad de los datos es un paso previo indispensable antes de la producción e interpretación de indicadores epidemiológicos. Organismos internacionales como la Agencia Internacional para la Investigación en Cáncer (IARC) han establecido un conjunto de métricas ampliamente utilizadas para este fin, incluyendo la proporción de verificación microscópica, la proporción de casos identificados únicamente mediante certificado de defunción y la consistencia de variables clave.
+
+Sin embargo, no todas las evaluaciones de calidad tienen como objetivo la certificación internacional del registro. En muchos contextos, es necesario realizar evaluaciones técnicas orientadas a determinar si los datos disponibles permiten la estimación de incidencia con un nivel de validez epidemiológica aceptable, aun cuando persistan limitaciones en otras dimensiones del registro.
+
+El presente informe evalúa la calidad del Registro Poblacional de Cáncer de Arequipa para el periodo 2015–2022, con un enfoque específico en su aptitud para el análisis de incidencia. La evaluación considera tanto la calidad estructural de las variables como indicadores epidemiológicos estándar, e incorpora un análisis de las implicancias prácticas de los hallazgos sobre la validez de las estimaciones, la comparabilidad temporal y la interpretación de resultados en subgrupos poblacionales.
+
+Este análisis no constituye una evaluación exhaustiva de exhaustividad de captación ni una certificación bajo estándares internacionales como CI5, sino una valoración técnica de la utilidad analítica del registro en su estado actual. En consecuencia, los resultados deben interpretarse en términos de su impacto sobre la validez de las estimaciones de incidencia y no como una validación integral del sistema de registro.
+
+# MÉTODOS
+
+## Fuente de datos y unidad de análisis
+
+Se analizaron registros individuales de cáncer correspondientes al periodo 2015–2022, consolidados en una base de datos analítica del registro poblacional de cáncer de Arequipa. La unidad de análisis corresponde a cada caso registrado.
+
+Se distinguieron dos universos analíticos: el total de registros disponibles y el subconjunto de registros considerados elegibles para análisis de incidencia, definidos mediante criterios orientados a asegurar la validez epidemiológica de las estimaciones.
+
+## Indicadores de calidad evaluados
+
+La calidad del registro se evaluó mediante indicadores epidemiológicos y de completitud comúnmente utilizados en la valoración de registros poblacionales de cáncer. Estos incluyeron la proporción de casos con verificación microscópica, la proporción de casos identificados únicamente mediante certificado de defunción, la completitud de variables críticas como sexo, edad, topografía, morfología, base diagnóstica y estado vital, así como la consistencia interna entre variables clave. Adicionalmente, se examinó la distribución de la base diagnóstica y la estabilidad temporal de los principales indicadores de calidad. La proporción de casos con base diagnóstica desconocida se utilizó como un indicador indirecto de la calidad de la información diagnóstica.
+
+## Enfoque de interpretación
+
+Los indicadores se interpretaron en términos de su impacto potencial sobre la validez de las estimaciones epidemiológicas. En particular, se evaluó cómo las limitaciones identificadas podrían afectar la estimación de incidencia, la comparabilidad temporal y la interpretación de resultados por subgrupos poblacionales.
+
+El presente análisis no constituye una evaluación exhaustiva bajo criterios internacionales de certificación, sino una evaluación operativa orientada a determinar la utilidad del registro para análisis epidemiológicos.
+
+## Reglas analíticas principales
+
+Se adoptó como ámbito geográfico principal la Provincia de Arequipa y como estrategia principal de denominadores la población de mitad de periodo con año de referencia 2018. La base diagnóstica se derivó a partir del catálogo local BASE #7. Los indicadores de calidad se presentan tanto para el total de registros como, cuando corresponde, para los casos incluidos analíticamente para incidencia.
+
+## Indicadores mínimos de calidad
+
+El conjunto mínimo de indicadores considerado en este informe incluyó la completitud de variables críticas, la proporción de casos con verificación microscópica, la proporción de casos DCO, la elegibilidad analítica para incidencia, la consistencia de la información de estado vital, la distribución de la base diagnóstica y el perfil básico del registro según año, sexo y edad.
+
+## Consideraciones sobre calidad y validez epidemiológica
+
+En los registros poblacionales de cáncer, la calidad de los datos tiene implicancias directas sobre la validez de las estimaciones de incidencia y otros indicadores. La incompletitud de variables clave, la presencia de categorías desconocidas y la inconsistencia entre variables pueden introducir sesgos que afectan tanto las tasas globales como las estimaciones específicas por edad, sexo o tipo de tumor.
+
+La proporción de casos con verificación microscópica es un indicador de la validez diagnóstica, mientras que la proporción de casos DCO refleja posibles limitaciones en la captación de casos incidentes. Por su parte, la calidad de la información de estado vital es determinante para análisis de mortalidad y supervivencia, y la consistencia de la base diagnóstica influye en la clasificación de los casos.
+
+En este contexto, los resultados del presente informe deben interpretarse considerando no solo los valores observados de los indicadores, sino también sus implicancias para la interpretación epidemiológica de los datos.
+
+# Resultados
+
+## Estructura general del dataset
+
+La proporción de casos incluidos es consistente con un proceso de depuración orientado a maximizar la validez epidemiológica (ver @tbl-dataset-analitico). 
+
+```{r}
+#| label: tbl-dataset-analitico
+#| tbl-cap: "Estructura general del dataset analítico"
+qc_structure_summary %>%
+  transmute(
+    `Total de registros` = n_total,
+    `Incluidos para incidencia` = n_incidence_yes,
+    `No incluidos para incidencia` = n_incidence_no,
+    `Elegibilidad no determinada` = n_incidence_unknown
+  ) %>%
+  knitr::kable()
+```
+
+Sin embargo, la exclusión de una fracción de los registros puede introducir sesgos si los casos excluidos presentan características sistemáticamente diferentes, lo cual debe considerarse en la interpretación de los resultados, especialmente en análisis estratificados.
+
+## Indicadores de calidad epidemiológica
+
+```{r}
+
+```
+
+La clasificación de la base diagnóstica se realizó utilizando los códigos operativos del registro, consistentes con esquemas ampliamente utilizados en registros poblacionales de cáncer (@tbl-calidad-epi). Bajo esta definición, la proporción de casos con verificación microscópica fue de `r percent(mv_included, accuracy = 0.1)`, lo que sugiere una adecuada validez diagnóstica para fines de análisis de incidencia.
+
+```{r}
+#| label: tbl-calidad-epi
+#| tbl-cap: "Indicadores centrales de calidad epidemiológica"
+qc_indicators_table %>%
+  mutate(
+    Total = percent(Total, accuracy = 0.1),
+    Incidencia = percent(Incidencia, accuracy = 0.1)
+  ) %>%
+  knitr::kable()
+```
+
+La proporción de casos identificados únicamente mediante certificado de defunción fue de `r percent(dco_included, accuracy = 0.1)`, lo que indica baja dependencia de fuentes pasivas y es compatible con una captación razonablemente completa de casos incidentes.
+
+La proporción de casos con base diagnóstica desconocida o faltante fue de `r percent(unknown_bd_included, accuracy = 0.1)`. Aunque esta magnitud no impide el análisis de incidencia, sí introduce incertidumbre en la clasificación de algunos casos y puede afectar con mayor intensidad los análisis por sitio anatómico o por subgrupos.
+
+La proporción de PSU fue de `r percent(psu_included, accuracy = 0.1)`. Este indicador debe interpretarse como una aproximación operativa y no como una clasificación definitiva. Aun así, niveles elevados de este grupo pueden sugerir limitaciones en la confirmación diagnóstica o en la completitud de la información clínica disponible.
+
+## Calidad de variables críticas
+
+```{r}
+qc_variables <- tibble(
+  variable = c(
+    "Sexo",
+    "Edad",
+    "Edad implausible",
+    "Topografía",
+    "Morfología",
+    "Base diagnóstica desconocida o faltante",
+    "Residencia desconocida o faltante",
+    "Inconsistencia de estado vital"
+  ),
+  missing = c(
+    qc_missing_core %>% filter(indicator == "sex_missing") %>% pull(percent) / 100,
+    qc_missing_core %>% filter(indicator == "age_missing") %>% pull(percent) / 100,
+    qc_missing_core %>% filter(indicator == "age_implausible") %>% pull(percent) / 100,
+    qc_missing_core %>% filter(indicator == "topography_missing") %>% pull(percent) / 100,
+    qc_missing_core %>% filter(indicator == "morphology_missing") %>% pull(percent) / 100,
+    qc_missing_core %>% filter(indicator == "basis_unknown_or_missing") %>% pull(percent) / 100,
+    qc_missing_core %>% filter(indicator == "residence_unknown_or_missing") %>% pull(percent) / 100,
+    qc_missing_core %>% filter(indicator == "vital_inconsistency") %>% pull(percent) / 100
+  )
+)
+```
+
+Las variables estructurales fundamentales, como sexo y edad, presentan niveles muy bajos de ausencia de información, lo que favorece la estabilidad de las tasas específicas por edad y sexo (@tbl-calidad-estruct). Del mismo modo, la falta de información en topografía y morfología es reducida, lo que respalda la validez de la clasificación diagnóstica global del registro.
+
+```{r}
+#| label: tbl-calidad-estruct
+#| tbl-cap: "Calidad de variables críticas"
+qc_variables %>%
+  mutate(`Proporción` = percent(missing, accuracy = 0.1)) %>%
+  select(Variable = variable, Proporción) %>%
+   knitr::kable()
+```
+
+En contraste, la proporción de registros con base diagnóstica desconocida o faltante fue de `r qc_variables %>% filter(variable == "Base diagnóstica desconocida o faltante") %>% pull(missing) %>% percent(accuracy = 0.1)`, mientras que la proporción de inconsistencia en estado vital fue de `r qc_variables %>% filter(variable == "Inconsistencia de estado vital") %>% pull(missing) %>% percent(accuracy = 0.1)`. Estas limitaciones tienen implicancias directas para la interpretación epidemiológica.
+
+La incompletitud o ambigüedad en la base diagnóstica puede afectar la clasificación de los casos y la interpretación de análisis específicos por tipo de tumor. Por su parte, los problemas en estado vital restringen especialmente la posibilidad de utilizar el registro para análisis de mortalidad o supervivencia con el mismo grado de confianza que para incidencia.
+
+La proporción de residencia desconocida o faltante fue baja, pero incluso niveles reducidos de este problema pueden afectar la asignación geográfica de casos cuando se buscan estimaciones subprovinciales o comparaciones territoriales más finas.
+
+## Tendencia anual de variables críticas
+
+La variabilidad observada entre años sugiere que la calidad del registro no ha sido completamente homogénea durante todo el periodo de estudio (@fig-tendencia-var-critic). Estas fluctuaciones pueden reflejar cambios en los procesos de captación, en la completitud de ciertas variables o en la calidad del registro en distintos años.
+
+
+```{r}
+qc_year_long <- qc_missing_core_by_year_clean %>%
+  select(
+    qc_year,
+    basis_unknown_or_missing_pct,
+    residence_unknown_or_missing_pct,
+    vital_inconsistency_pct
+  ) %>%
+  pivot_longer(
+    -qc_year,
+    names_to = "indicator",
+    values_to = "percent"
+  ) %>%
+  mutate(
+    indicator = recode(
+      indicator,
+      basis_unknown_or_missing_pct = "Base diagnóstica desconocida/faltante",
+      residence_unknown_or_missing_pct = "Residencia desconocida/faltante",
+      vital_inconsistency_pct = "Inconsistencia de estado vital"
+    )
+  )
+
+p1 <- ggplot(qc_year_long, aes(x = qc_year, y = percent / 100, color = indicator)) +
+  geom_line(linewidth = 1) +
+  geom_point() +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(
+    x = "Año",
+    y = "Proporción",
+    color = "Indicador"
+  ) +
+  theme_minimal()
+
+ggsave(filename = "p1.png", 
+       plot = p1, 
+       device = "png", 
+       path = here("REPORTS", "FIGURES"), 
+       scale = 1, 
+       dpi = 300)
+```
+
+
+```{r}
+#| label: fig-tendencia-var-critic
+#| fig-cap: "Tendencia anual de indicadores críticos de calidad"
+#| fig-pos: "H"
+knitr::include_graphics(here("REPORTS", "FIGURES", "p1.png"))
+```
+
+En consecuencia, los análisis de tendencia temporal de incidencia deben interpretarse con cautela, especialmente cuando se evalúan cambios interanuales de pequeña magnitud, ya que parte de la variación observada podría estar influida por cambios en la calidad de los datos y no exclusivamente por cambios reales en la ocurrencia del cáncer.
+
+## Distribución anual de base diagnóstica
+
+La distribución anual de la base diagnóstica muestra predominio persistente de confirmación microscópica, lo que es un hallazgo favorable en términos de validez diagnóstica (@fig-distrib-anual). Sin embargo, la persistencia de categorías desconocidas o no microscópicas en algunos años sugiere que la calidad de la documentación diagnóstica no ha sido completamente uniforme a lo largo del tiempo.
+
+
+```{r}
+p2 <- ggplot(
+  qc_basis_group_by_year_clean,
+  aes(x = qc_year, y = prop_within_year, fill = qc_basis_group)
+) +
+  geom_col() +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(
+    x = "Año",
+    y = "Proporción dentro del año",
+    fill = "Grupo"
+  ) +
+  theme_minimal()
+
+ggsave(filename = "p2.png", 
+       plot = p2, 
+       device = "png", 
+       path = here("REPORTS", "FIGURES"), 
+       scale = 1, 
+       dpi = 300)
+```
+
+```{r}
+#| label: fig-distrib-anual
+#| fig-cap: "Distribución anual de la base diagnóstica"
+#| fig-pos: "H"
+knitr::include_graphics(here("REPORTS", "FIGURES", "p2.png"))
+```
+
+Estas diferencias son relevantes porque pueden afectar la comparabilidad temporal de los perfiles de incidencia, particularmente en neoplasias cuya confirmación diagnóstica depende más fuertemente de recursos histopatológicos o de la completitud del registro clínico.
+
+## Sitios más frecuentes entre casos incluidos para incidencia
+
+El perfil de topografías más frecuentes entre los casos incluidos para incidencia ofrece una primera aproximación a la composición diagnóstica del registro en el periodo evaluado (@fig-top-freq). Este patrón es útil para valorar la plausibilidad epidemiológica global del universo analítico y para identificar grupos de neoplasias con mayor peso relativo en el registro. No obstante, estos resultados deben interpretarse con cautela, dado que la jerarquización final por sitio para fines de incidencia requiere una etapa posterior de agrupación diagnóstica estandarizada y estimación formal de tasas.
+
+```{r}
+p3 <- qc_top10_topography_incidence %>%
+  mutate(
+    qc_topography_group = forcats::fct_reorder(as.character(qc_topography_group), n)
+  ) %>%
+  ggplot(aes(x = n, y = qc_topography_group)) +
+  geom_col() +
+  labs(
+    x = "Número de casos",
+    y = "Topografía ICD-O"
+  ) +
+  theme_minimal()
+
+ggsave(filename = "p3.png", 
+       plot = p3, 
+       device = "png", 
+       path = here("REPORTS", "FIGURES"), 
+       scale = 1, 
+       dpi = 300)
+```
+
+
+```{r}
+#| label: fig-top-freq
+#| fig-cap: "Topografías más frecuentes entre los casos incluidos para incidencia"
+#| fig-pos: "H"
+knitr::include_graphics(here("REPORTS", "FIGURES", "p3.png"))
+```
+
+## Consistencia del estado vital
+
+```{r}
+# ===============================
+# QC ESTADO VITAL
+# ===============================
+
+qc_vital <- read_qc_safe(path_qc_data, "qc_vital_flags.csv") %>%
+  mutate(proportion = numerator / denominator)
+
+get_prop <- function(data, key) {
+  out <- data %>%
+    filter(indicator == key) %>%
+    pull(proportion)
+
+  if (length(out) == 0) NA_real_ else out[[1]]
+}
+
+prop_dead_without_death_date <- get_prop(qc_vital, "dead_without_death_date")
+prop_alive_with_death_date   <- get_prop(qc_vital, "alive_with_death_date")
+prop_vital_inconsistency     <- get_prop(qc_vital, "vital_inconsistency")
+
+# detectar automáticamente el indicador de estado vital desconocido
+unknown_key <- qc_vital %>%
+  filter(stringr::str_detect(indicator, "^vital_status_")) %>%
+  filter(indicator != "vital_inconsistency") %>%
+  pull(indicator)
+
+prop_vital_unknown <- if (length(unknown_key) == 0) {
+  NA_real_
+} else {
+  get_prop(qc_vital, unknown_key[[1]])
+}
+```
+
+
+La evaluación de la información de estado vital mostró que el `r scales::percent(prop_vital_inconsistency, accuracy = 0.1)` de los registros presentaron alguna inconsistencia global en esta variable (@tbl-estado-vital). En particular, el `r scales::percent(prop_dead_without_death_date, accuracy = 0.1)` correspondió a registros clasificados como fallecidos sin fecha de defunción consignada, mientras que el `r scales::percent(prop_alive_with_death_date, accuracy = 0.1)` presentó la combinación inversa, es decir, registros clasificados como vivos a pesar de contar con fecha de defunción.
+
+
+```{r}
+#| label: tbl-estado-vital
+#| tbl-cap: "Consistencia de la información de estado vital"
+tibble(
+  Indicador = c(
+    "Fallecido sin fecha de defunción",
+    "Vivo con fecha de defunción",
+    "Inconsistencia global de estado vital",
+    "Estado vital desconocido"
+  ),
+  Proporción = c(
+    prop_dead_without_death_date,
+    prop_alive_with_death_date,
+    prop_vital_inconsistency,
+    prop_vital_unknown
+  )
+) %>%
+  mutate(Proporción = scales::percent(Proporción, accuracy = 0.1)) %>%
+  knitr::kable()
+```
+
+Adicionalmente, la proporción de casos con estado vital desconocido fue de `r ifelse(is.na(prop_vital_unknown), "no disponible en el resumen actual", scales::percent(prop_vital_unknown, accuracy = 0.1))`. Esta magnitud es relevante desde el punto de vista epidemiológico, ya que la calidad del estado vital condiciona directamente la posibilidad de realizar análisis válidos de mortalidad y supervivencia.
+
+Estas limitaciones no comprometen de manera sustantiva la estimación de incidencia, pero sí restringen la utilidad del registro para análisis que dependen críticamente del seguimiento adecuado de los casos. En particular, la presencia de estado vital desconocido o inconsistente puede introducir sesgos en análisis de supervivencia, ya sea por clasificación errónea del desenlace o por subregistro de eventos.
+
+## Calidad de la variable residencia
+
+```{r}
+# ===============================
+# QC RESIDENCIA
+# ===============================
+
+qc_res <- read_qc_safe(path_qc_data, "qc_residence_distribution.csv")
+
+prop_residence_provincia <- qc_res %>%
+  filter(qc_residence_area == "provincia_arequipa") %>%
+  pull(prop)
+
+prop_residence_outside_scope <- qc_res %>%
+  filter(qc_residence_area == "outside_scope") %>%
+  pull(prop)
+
+prop_residence_other_province <- qc_res %>%
+  filter(qc_residence_area == "departamento_arequipa_other_province") %>%
+  pull(prop)
+
+prop_residence_other <- 1 - sum(
+  c(prop_residence_provincia, prop_residence_outside_scope, prop_residence_other_province),
+  na.rm = TRUE
+)
+```
+
+La residencia constituye una variable central en los registros poblacionales de cáncer, ya que permite asignar los casos al ámbito geográfico de referencia y sustentar la estimación de tasas de incidencia basadas en denominadores poblacionales apropiados (@tbl-residencia).
+
+```{r}
+#| label: tbl-residencia
+#| tbl-cap: "Distribución analítica de la residencia"
+tibble(
+  Categoría = c(
+    "Provincia de Arequipa",
+    "Fuera del ámbito analítico",
+    "Otras provincias del departamento de Arequipa",
+    "Otras categorías residuales"
+  ),
+  Proporción = c(
+    prop_residence_provincia,
+    prop_residence_outside_scope,
+    prop_residence_other_province,
+    prop_residence_other
+  )
+) %>%
+  mutate(Proporción = scales::percent(Proporción, accuracy = 0.1)) %>%
+  knitr::kable()
+```
+
+En el presente análisis, el `r scales::percent(prop_residence_provincia, accuracy = 0.1)` de los registros correspondieron a residentes de la provincia de Arequipa, mientras que el `r scales::percent(prop_residence_outside_scope, accuracy = 0.1)` fueron clasificados fuera del ámbito analítico y el `r scales::percent(prop_residence_other_province, accuracy = 0.1)` correspondieron a residentes de otras provincias del departamento.
+
+Este patrón indica que la variable de residencia no solo cumple una función descriptiva, sino que tiene implicancias directas para la definición del universo elegible para incidencia. Una proporción importante de registros fuera del ámbito de referencia puede afectar la interpretación de las frecuencias absolutas del registro si no se distingue con claridad entre universo captado y universo poblacionalmente elegible.
+
+En términos epidemiológicos, estas diferencias son especialmente relevantes para la estimación de tasas, ya que una asignación geográfica inadecuada puede introducir sesgos por inclusión de casos no pertenecientes a la población de referencia o por exclusión errónea de residentes válidos. Por ello, la calidad de esta variable debe considerarse un componente esencial de la validez de los análisis de incidencia.
+
+
+# Limitaciones
+
+La evaluación presenta varias limitaciones que deben considerarse en la interpretación de los resultados.
+
+En primer lugar, algunos indicadores se derivan de la información disponible en la base analítica y deben interpretarse como aproximaciones operativas, lo que puede introducir incertidumbre en su interpretación.
+
+En segundo lugar, la incompletitud de variables como base diagnóstica, estado vital y residencia puede introducir sesgos en la estimación de incidencia, particularmente en análisis estratificados y en subgrupos específicos.
+
+En tercer lugar, la variabilidad temporal en los indicadores sugiere diferencias en la calidad del registro entre años, lo que limita la comparabilidad temporal estricta.
+
+Finalmente, la calidad de la información de estado vital restringe la posibilidad de realizar análisis robustos de mortalidad y supervivencia, los cuales dependen críticamente de la integridad del seguimiento de los casos.
+
+# Conclusiones operativas
+
+El Registro Poblacional de Cáncer de Arequipa presenta, para el periodo 2015–2022, un perfil de calidad compatible con la realización de análisis de incidencia, particularmente por la alta proporción de verificación microscópica, la baja proporción de casos DCO y la adecuada completitud de variables estructurales fundamentales. Sin embargo, persisten limitaciones relevantes en la base diagnóstica, en la consistencia del estado vital y en la homogeneidad temporal de algunos indicadores, las cuales deben ser consideradas explícitamente al interpretar los resultados.
+
+En términos prácticos, estas limitaciones no impiden el análisis de incidencia global, pero sí aconsejan prudencia en la interpretación de estimaciones desagregadas por subgrupos, en la evaluación de tendencias interanuales de pequeña magnitud y, especialmente, en cualquier análisis que dependa críticamente de la calidad del estado vital o de la asignación geográfica detallada de los casos.
+
+```{r}
+
+```
+

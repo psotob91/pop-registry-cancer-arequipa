@@ -1,0 +1,33 @@
+:root {
+  --rcbpa-ink: #13343b;
+  --rcbpa-accent: #8f2d19;
+  --rcbpa-soft: #f4efe6;
+  --rcbpa-line: #d7cdbd;
+}
+
+body {
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--rcbpa-ink);
+  background: linear-gradient(180deg, #fbf8f2 0%, #f0eadf 100%);
+}
+
+.navbar {
+  background-color: #f7f1e6;
+  border-bottom: 1px solid var(--rcbpa-line);
+}
+
+h1, h2, h3 {
+  color: var(--rcbpa-ink);
+  letter-spacing: 0.02em;
+}
+
+table {
+  background: white;
+  border: 1px solid var(--rcbpa-line);
+}
+
+.quarto-title-banner {
+  background: linear-gradient(135deg, #f5efe0 0%, #e7dcc7 100%);
+  color: var(--rcbpa-ink);
+  border-bottom: 2px solid var(--rcbpa-accent);
+}

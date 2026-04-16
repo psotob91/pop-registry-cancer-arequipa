@@ -1,0 +1,31 @@
+---
+title: "Portal RCBPA Arequipa"
+---
+
+```{r}
+library(tidyverse)
+library(fs)
+root <- normalizePath("..\\..", winslash = "/", mustWork = TRUE)
+read_csv_safe <- function(...) readr::read_csv(fs::path(root, ...), show_col_types = FALSE)
+normalize_asr <- function(df, count_col) {
+  if (!count_col %in% names(df)) df[[count_col]] <- numeric()
+  df %>%
+    mutate(
+      !!count_col := as.numeric(.data[[count_col]]),
+      population_mid = as.numeric(population_mid),
+      asr_per_100k = as.numeric(asr_per_100k),
+      crude_period_rate_per_100k = as.numeric(crude_period_rate_per_100k)
+    )
+}
+inc_asr <- read_csv_safe("DATA","DERIVED","RATES","incidence_rates_asr_period.csv") %>% normalize_asr("cases_period")
+mort_asr <- read_csv_safe("DATA","DERIVED","RATES","mortality_rates_asr_period.csv") %>% normalize_asr("deaths_period")
+```
+
+Portal operativo inspirado en `tabla-vida-estandar`, orientado a publicar resultados reproducibles, QC y trazabilidad del Registro Poblacional de Cáncer de Arequipa.
+
+```{r}
+bind_rows(
+  inc_asr %>% transmute(module = "Incidencia", sex, asr_per_100k, crude_period_rate_per_100k),
+  mort_asr %>% transmute(module = "Mortalidad", sex, asr_per_100k, crude_period_rate_per_100k)
+) %>% select(module, sex, asr_per_100k, crude_period_rate_per_100k) %>% knitr::kable()
+```

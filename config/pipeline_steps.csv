@@ -1,0 +1,14 @@
+step_order,step_id,script_path_canonical,phase_group,profile_full,profile_core,profile_reports,blocking,notes,primary_dataset_id
+10,preflight,SCRIPTS/run_preflight_checks.R,ops,TRUE,TRUE,FALSE,TRUE,Verifica dependencias rutas y fuentes,project_runtime
+20,audit_raw,SCRIPTS/00_audit_raw_dictionary.R,core,TRUE,TRUE,FALSE,TRUE,Reconstruye auditoria raw desde Excel fuente,rcpa_raw_exact
+30,harmonize,SCRIPTS/01_build_harmonization_pipeline.R,core,TRUE,TRUE,FALSE,TRUE,Reconstruye harmonized wide y long,rcpa_arequipa_2015_2022_harmonized_wide
+40,semantic_profile,SCRIPTS/02_semantic_recoding_and_domain_profiling.R,core,TRUE,TRUE,FALSE,TRUE,Actualiza perfilado y candidatos semanticos,semantic_recode_candidates
+50,semantic_dictionary,SCRIPTS/03_semantic_dictionary_building.R,core,TRUE,TRUE,FALSE,TRUE,Actualiza diccionarios locales y decisiones,semantic_dictionary_updates
+60,semantic_standardization,SCRIPTS/04_semantic_standardization.R,core,TRUE,TRUE,FALSE,FALSE,Aplica estandarizacion semantica donde corresponde,semantic_standardization_preview
+70,analytic_dataset,SCRIPTS/05_build_analytic_dataset.R,core,TRUE,TRUE,FALSE,TRUE,Construye dataset analitico canonico,rcpa_arequipa_2015_2022_analytic_dataset
+80,qc_registry,SCRIPTS/06_qc_epidemiologic_registry.R,core,TRUE,TRUE,FALSE,TRUE,Construye QC epidemiologico canonico,qc_epidemiologic_summary
+90,population,SCRIPTS/07_build_population_denominators.R,core,TRUE,TRUE,FALSE,TRUE,Construye denominadores provinciales y pesos de estandarizacion,arequipa_province_population_denominators
+100,incidence_rates,SCRIPTS/08_build_incidence_rates.R,core,TRUE,TRUE,FALSE,TRUE,Construye tasas de incidencia y QC asociado,incidence_rates
+110,mortality_rates,SCRIPTS/09_build_mortality_rates.R,core,TRUE,TRUE,FALSE,TRUE,Construye tasas de mortalidad y QC asociado,mortality_rates
+120,compare_baseline,SCRIPTS/compare_baseline_outputs.R,ops,TRUE,FALSE,TRUE,FALSE,Compara outputs contractuales contra snapshot baseline,contract_comparison
+130,render_portal,SCRIPTS/10_render_audit_portal.R,reports,TRUE,FALSE,TRUE,FALSE,Renderiza auditoria integral y sitio Quarto,portal_rcbpa

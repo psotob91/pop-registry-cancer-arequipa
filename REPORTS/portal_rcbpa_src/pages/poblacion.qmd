@@ -1,0 +1,20 @@
+---
+title: "Poblacion"
+---
+
+```{r}
+library(tidyverse)
+library(fs)
+root <- normalizePath("..\\..\\..", winslash = "/", mustWork = TRUE)
+read_csv_safe <- function(...) readr::read_csv(fs::path(root, ...), show_col_types = FALSE)
+pop <- read_csv_safe("DATA","DERIVED","POPULATION","arequipa_province_population_denominators.csv")
+qc_pop <- read_csv_safe("DATA","DERIVED","QC","qc_population_denominators.csv")
+```
+
+```{r}
+qc_pop %>% knitr::kable()
+```
+
+```{r}
+pop %>% group_by(year, sex) %>% summarise(population = sum(population), .groups = "drop") %>% knitr::kable()
+```

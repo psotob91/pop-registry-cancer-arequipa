@@ -1,0 +1,95 @@
+---
+title: "Auditoría Integral RCBPA Arequipa"
+subtitle: "Reconstrucción reproducible, tasas y trazabilidad"
+author: "Equipo técnico del RCBPA"
+lang: es
+format:
+  html:
+    toc: true
+    number-sections: true
+    css: portal_rcbpa_src/assets/portal.css
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+library(tidyverse)
+library(fs)
+library(knitr)
+root <- normalizePath("..", winslash = "/", mustWork = TRUE)
+read_csv_safe <- function(...) readr::read_csv(fs::path(root, ...), show_col_types = FALSE)
+normalize_asr <- function(df, count_col) {
+  if (!count_col %in% names(df)) df[[count_col]] <- numeric()
+  df %>%
+    mutate(
+      !!count_col := as.numeric(.data[[count_col]]),
+      population_mid = as.numeric(population_mid),
+      asr_per_100k = as.numeric(asr_per_100k),
+      crude_period_rate_per_100k = as.numeric(crude_period_rate_per_100k)
+    )
+}
+preflight <- read_csv_safe("REPORTS", "preflight_checks.csv")
+qc_pop <- read_csv_safe("DATA", "DERIVED", "QC", "qc_population_denominators.csv")
+qc_rates <- read_csv_safe("DATA", "DERIVED", "QC", "qc_rates_consistency.csv")
+qc_mortality_trace <- read_csv_safe("DATA", "DERIVED", "QC", "qc_mortality_traceability_by_year.csv")
+qc_mortality_discordance <- read_csv_safe("DATA", "DERIVED", "QC", "qc_mortality_vital_date_discordance.csv")
+inc_asr <- read_csv_safe("DATA", "DERIVED", "RATES", "incidence_rates_asr_period.csv") %>% normalize_asr("cases_period")
+mort_asr <- read_csv_safe("DATA", "DERIVED", "RATES", "mortality_rates_asr_period.csv") %>% normalize_asr("deaths_period")
+mort_sensitivity <- read_csv_safe("DATA", "DERIVED", "RATES", "mortality_sensitivity_summary.csv")
+```
+
+# Estado general
+
+```{r}
+tibble(
+  chequeos_totales = nrow(preflight),
+  chequeos_ok = sum(preflight$status),
+  denominadores_checks = nrow(qc_pop),
+  tasas_checks = nrow(qc_rates)
+) %>% knitr::kable()
+```
+
+# Preflight
+
+```{r}
+preflight %>% select(check_type, item, status, details) %>% knitr::kable()
+```
+
+# Denominadores
+
+```{r}
+qc_pop %>% knitr::kable()
+```
+
+# Tasas ajustadas del período
+
+```{r}
+bind_rows(
+  inc_asr %>% transmute(module = "incidencia", sex, asr_per_100k, crude_period_rate_per_100k),
+  mort_asr %>% transmute(module = "mortalidad", sex, asr_per_100k, crude_period_rate_per_100k)
+) %>% knitr::kable()
+```
+
+# QC de tasas
+
+```{r}
+qc_rates %>% knitr::kable()
+```
+
+# Auditoria de mortalidad
+
+```{r}
+qc_mortality_trace %>% knitr::kable()
+```
+
+```{r}
+mort_sensitivity %>% knitr::kable()
+```
+
+```{r}
+qc_mortality_discordance %>%
+  count(discordance_type, sort = TRUE) %>%
+  knitr::kable()
+```

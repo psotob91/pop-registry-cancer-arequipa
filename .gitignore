@@ -1,0 +1,216 @@
+# ============================================================
+# 0. SECRETOS / CREDENCIALES
+# ============================================================
+
+.Renviron
+.Renviron*
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+credentials*
+token*
+tokens*
+auth*
+secrets*
+service-account*.json
+*secret*.json
+*token*.json
+
+# ============================================================
+# 1. DATOS CRUDOS Y DERIVADOS (NO PÚBLICOS)
+# ============================================================
+
+DATA/
+data/
+
+# ============================================================
+# 2. TABULARES / BASES / DATOS (IGNORAR POR DEFECTO)
+# ============================================================
+
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.ods
+*.rds
+*.rda
+*.RData
+*.parquet
+*.feather
+*.fst
+*.qs
+
+# JSON: ignorar por defecto, luego abrir excepciones estructurales
+*.json
+
+# ============================================================
+# 3. OUTPUTS / REPORTES RENDERIZADOS
+# ============================================================
+
+*.pdf
+*.docx
+*.doc
+*.pptx
+*.ppt
+*.pptm
+*.html
+
+*_files/
+.quarto/
+_cache/
+cache/
+.knit_cache/
+_site/
+_book/
+
+# ============================================================
+# 4. LOGS / TMP
+# ============================================================
+
+*.log
+*.tmp
+*.bak
+*.out
+*.err
+
+# ============================================================
+# 5. R / RSTUDIO
+# ============================================================
+
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+
+# ============================================================
+# 6. SISTEMA / ENTORNOS
+# ============================================================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+.venv/
+venv/
+__pycache__/
+node_modules/
+renv/library/
+renv/staging/
+renv/python/
+
+# ============================================================
+# 7. EXCEPCIONES: CÓDIGO Y DOCUMENTACIÓN ESTRUCTURAL
+# ============================================================
+
+!SCRIPTS/
+!SCRIPTS/**
+!R/
+!R/**
+!scripts/
+!scripts/**
+!src/
+!src/**
+!inst/
+!inst/**
+
+!*.Rproj
+!.gitignore
+!README.md
+!README.qmd
+!LICENSE
+!renv.lock
+
+!*.md
+!*.txt
+!*.yaml
+!*.yml
+!*.qmd
+!*.toml
+!*.ini
+!*.css
+!*.scss
+
+# ============================================================
+# 8. EXCEPCIONES: MANIFIESTOS / METADATA ESTRUCTURAL
+# ============================================================
+
+!META_MANIFESTS/
+!META_MANIFESTS/**
+!metadata/
+!metadata/**
+!config/
+!config/**
+!inst/extdata/
+!inst/extdata/**
+
+# CSV maestros / metadata
+!META_MANIFESTS/*.csv
+!metadata/*.csv
+!metadata/**/*.csv
+!config/*.csv
+!config/**/*.csv
+!inst/extdata/*.csv
+!inst/extdata/**/*.csv
+
+# JSON/YAML estructurales
+!META_MANIFESTS/*.json
+!metadata/*.json
+!metadata/**/*.json
+!config/*.json
+!config/**/*.json
+!*.json
+!*.yaml
+!*.yml
+
+# ============================================================
+# 9. EXCEPCIONES ESPECÍFICAS DEL PROYECTO
+# ============================================================
+
+# Maestros esperados por scripts
+!DATA/DERIVED/METADATA/
+!DATA/DERIVED/METADATA/*.csv
+!REPORTS/METADATA/
+!REPORTS/METADATA/*.csv
+
+# Si agregas manifiestos de datos/código
+!MASTER_FILE_INDEX.csv
+!DATA_REGISTRY.csv
+!CODE_MANIFEST.csv
+
+# ============================================================
+# 10. REPORTS: NO subir CSV de outputs, salvo metadata estructural
+# ============================================================
+
+!REPORTS/
+REPORTS/*.csv
+REPORTS/*.json
+REPORTS/*.pdf
+REPORTS/*.html
+REPORTS/*.docx
+REPORTS/*.pptx
+REPORTS/*_files/
+REPORTS/FIGURES/
+REPORTS/pipeline_runs/
+REPORTS/portal_rcbpa/
+REPORTS/QC/
+REPORTS/SEMANTIC/
+REPORTS/harmonization_summary.md
+REPORTS/semantic_dictionary_summary.md
+REPORTS/semantic_phase_summary.md
+REPORTS/qc_registry_minimo_arequipa.pdf
+REPORTS/auditoria_integral_rcbpa_arequipa_files/
+
+!REPORTS/*.md
+!REPORTS/*.qmd
+!REPORTS/*.txt
+!REPORTS/METADATA/
+!REPORTS/METADATA/**
+!REPORTS/SPECS/
+!REPORTS/SPECS/**
+REPORTS/METADATA/QA_master_files_detail.csv
+REPORTS/METADATA/QA_master_files_summary.csv
+!DATA/RAW/MAESTROS/maestro_icd10_cancerlist_regex.xlsx

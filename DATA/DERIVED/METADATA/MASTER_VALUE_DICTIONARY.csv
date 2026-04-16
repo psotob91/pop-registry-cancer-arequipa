@@ -1,0 +1,25 @@
+variable_family,variable_raw,code_raw,label_local,label_english,analytic_group,analytic_value,is_unknown,is_missing_like,is_reportable,is_valid_for_primary_analysis,status,evidence_level,notes
+base_diagnostico,BASE #7,0,Sólo certificado de defunción,death_certificate_only,DCO,dco,0,0,1,1,active,documentary_direct_local,Cuenta para DCO
+base_diagnostico,BASE #7,1,Solamente clínico,clinical_only,non_microscopic,clinical_only,0,0,1,1,active,documentary_direct_local,
+base_diagnostico,BASE #7,2,Por imágenes,image_based,non_microscopic,image_based,0,0,1,1,active,documentary_direct_local,
+base_diagnostico,BASE #7,3,Por endoscopía,endoscopy_based,non_microscopic,endoscopy_based,0,0,1,1,active,documentary_direct_local,
+base_diagnostico,BASE #7,4,Cirugía exploratoria,exploratory_surgery,non_microscopic,exploratory_surgery,0,0,1,1,active,documentary_direct_local,
+base_diagnostico,BASE #7,5,Exámenes bioquímicos o inmunológicos,biochemical_or_immunological,non_microscopic,tumor_marker,0,0,1,1,active,documentary_direct_local,
+base_diagnostico,BASE #7,6,Citología o hematología lámina,cytology_or_hematology,microscopic_verification,cytology,0,0,1,1,active,documentary_direct_local,Cuenta para MV
+base_diagnostico,BASE #7,7,Histología de metástasis,histology_of_metastasis,microscopic_verification,histology_metastasis,0,0,1,1,active,documentary_direct_local,Cuenta para MV
+base_diagnostico,BASE #7,8,Histología de tumor primario,histology_primary_tumor,microscopic_verification,histology_primary,0,0,1,1,active,documentary_direct_local,Cuenta para MV
+base_diagnostico,BASE #7,9,Autopsia,autopsy,autopsy,autopsy,0,0,1,1,active,documentary_direct_local,
+base_diagnostico,BASE #7,10,Base de diagnóstico desconocida,unknown_basis,unknown,unknown,1,0,1,0,active,documentary_direct_local,
+estado_vital,ESTVIT,1,Vivo,alive,known,alive,0,0,1,1,active,empirical_plus_internal,Validar con FECDEF/FUC
+estado_vital,ESTVIT,2,Fallecido,dead,known,dead,0,0,1,1,active,empirical_plus_internal,Validar con FECDEF/FUC
+estado_vital,ESTVIT,5,No resuelto local,unresolved_local,unknown,unknown_or_unresolved,1,0,1,0,active,empirical_only,Conservar como unknown
+estado_vital,ESTVIT,9,Desconocido,unknown,unknown,unknown_or_unresolved,1,0,1,0,active,empirical_plus_internal,
+lateralidad,LATE 19,1,Derecha,right,known,right,0,0,1,1,active,empirical_only,
+lateralidad,LATE 19,2,Izquierda,left,known,left,0,0,1,1,active,empirical_only,
+lateralidad,LATE 19,3,Bilateral,bilateral,known,bilateral,0,0,1,1,active,empirical_only,
+lateralidad,LATE 19,4,Otra o no especificada local,other_or_not_stated_local,other,other_or_not_stated,0,0,1,0,active,empirical_only,No usar para exclusión
+lateralidad,LATE 19,9,Desconocido o no aplicable local,unknown_or_not_applicable_local,unknown,unknown,1,0,1,0,active,empirical_only,
+lateralidad,LATE 19,0,No resuelto local dominante,unresolved_local_dominant,unresolved,unknown,1,0,1,0,active,empirical_only,No colapsar automáticamente a no aplicable
+sexo,SEXO,1,Masculino,male,known,male,0,0,1,1,active,empirical_plus_internal,
+sexo,SEXO,2,Femenino,female,known,female,0,0,1,1,active,empirical_plus_internal,
+sexo,SEXO,9,Desconocido,unknown,unknown,unknown,1,0,1,0,provisional,hypothetical_if_present,Agregar solo si aparece en datos

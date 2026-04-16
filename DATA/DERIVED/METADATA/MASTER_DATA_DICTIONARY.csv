@@ -1,0 +1,67 @@
+variable_name,variable_name_standard,domain,description,data_type,possible_values,first_year_present,last_year_present,present_2015,present_2016,present_2017,present_2018,present_2019,present_2020,present_2021,present_2022,missing_rate,notes
+1° APE,1_ape,person_descriptive,,character_like,,2015,2022,1,1,1,1,1,1,1,1,17.86,quality_flags=high_cardinality_text
+1° NOMBRE,1_nombre,person_descriptive,,character_like,,2015,2022,1,1,1,1,1,1,1,1,17.91,quality_flags=high_cardinality_text
+2° APE,2_ape,person_descriptive,,character_like,,2015,2022,1,1,1,1,1,1,1,1,17.91,quality_flags=high_cardinality_text
+2° NOMBRE,2_nombre,person_descriptive,,character_like,,2015,2022,1,1,1,1,1,1,1,1,62.48,
+3° NOMBRE,3_nombre,person_descriptive,,categorical_like | character_like,CLEMENTE | DE LA CRUZ | FERNANDINA | LUISA | NEPTALI | RICHARD | TERESA,2015,2022,1,1,1,1,1,1,1,1,99.26,type_inconsistency=categorical_like; character_like; quality_flags=near_empty
+673668,673668,structural_anomaly,,integer_like,1 | 2 | 3 | 4,2018,2018,0,0,0,1,0,0,0,0,89.31,quality_flags=name_suspicious; header_anomaly; structural_garbage; contains_structural_garbage_or_header_anomaly
+BASE #7,base_diagnostico,tumor_core,Posible base de diagnóstico,integer_like,0 | 1 | 2 | 4 | 6 | 7 | 9,2015,2022,1,1,1,1,1,1,1,1,0.7,possible_iarc_field=base_diagnostico; iarc_mapping_confidence=moderate
+__blank_col_2,blank_col_2,structural_anomaly,,all_missing,,2017,2017,0,0,1,0,0,0,0,0,100,quality_flags=all_missing; name_suspicious; header_anomaly; structural_garbage; contains_structural_garbage_or_header_anomaly
+BUSC,busc,administrative,,all_missing | categorical_like,<,2015,2022,1,1,1,1,1,1,1,1,99.99,type_inconsistency=all_missing; categorical_like; quality_flags=all_missing; structural_garbage || near_empty; constant; contains_structural_garbage_or_header_anomaly
+CASO,caso,administrative,,all_missing,,2015,2022,1,1,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
+CAUSA,causa,clinical_auxiliary,,categorical_like | integer_like,1 | 2 | 3 | 9,2015,2022,1,1,1,1,1,1,1,1,78.67,type_inconsistency=categorical_like; integer_like
+CICN,cicn,clinical_auxiliary,,all_missing | categorical_like,C447 | C509 | C531 | C539,2015,2022,1,1,1,1,1,1,1,1,99.97,type_inconsistency=all_missing; categorical_like; quality_flags=all_missing; structural_garbage || near_empty; contains_structural_garbage_or_header_anomaly
+CIE10,cie10,clinical_auxiliary,,character_like,,2015,2022,1,1,1,1,1,1,1,1,3.33,
+COMPORT #5,comportamiento,tumor_core,,integer_like,2 | 3,2015,2022,1,1,1,1,1,1,1,1,0.84,possible_iarc_field=comportamiento; iarc_mapping_confidence=moderate
+DX,dx,clinical_auxiliary,,character_like,,2015,2022,1,1,1,1,1,1,1,1,3.11,quality_flags=high_cardinality_text
+EDAD,edad,demography,Posible edad,integer_like,,2015,2022,1,1,1,1,1,1,1,1,0.58,possible_iarc_field=edad; iarc_mapping_confidence=high
+ESTADIO,estadio,clinical_auxiliary,,character_like,0 | I | IA | IB | IB3 | IC | II | IIA | IIB | IIC | III | IIIA | IIIB | IIIC | IV | IVA | IVB | X,2015,2022,1,1,1,1,1,1,1,1,44.79,
+ESTVIT,estado_vital,followup_vital,Posible estado vital,integer_like,1 | 2,2015,2022,1,1,1,1,1,1,1,1,42.92,possible_iarc_field=estado_vital; iarc_mapping_confidence=high
+ESTCAS,estcas,administrative,,all_missing,,2015,2022,1,1,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
+ESTCIV,estciv,person_descriptive,,integer_like,1 | 2 | 5 | 9,2015,2022,1,1,1,1,1,1,1,1,3.27,
+FECDIAG,fecha_diagnostico,tumor_core,Posible fecha de diagnóstico,date_like,,2015,2022,1,1,1,1,1,1,1,1,0.57,possible_iarc_field=fecha_diagnostico; iarc_mapping_confidence=high
+FECDEF,fecha_muerte,followup_vital,Posible fecha de defunción,date_like,,2015,2022,1,1,1,1,1,1,1,1,78,possible_iarc_field=fecha_muerte; iarc_mapping_confidence=high
+FUC,fecha_ultimo_contacto,followup_vital,Posible fecha de último contacto,date_like,,2015,2022,1,1,1,1,1,1,1,1,24.9,possible_iarc_field=fecha_ultimo_contacto; iarc_mapping_confidence=high
+FECNAC,fecnac,other,,date_like,,2015,2022,1,1,1,1,1,1,1,1,0.57,
+GRADO,grado,tumor_core,,integer_like,1 | 2 | 3 | 4 | 5 | 6 | 9,2015,2022,1,1,1,1,1,1,1,1,0.69,possible_iarc_field=grado; iarc_mapping_confidence=high
+HC,hc,identifier,,date_like | integer_like,,2015,2022,1,1,1,1,1,1,1,1,17.55,type_inconsistency=date_like; integer_like
+INST #11,inst_number11,administrative,,integer_like,102 | 201 | 402 | 403 | 404,2015,2022,1,1,1,1,1,1,1,1,0.57,
+INSTR,instr,person_descriptive,,integer_like,1 | 2 | 3 | 4 | 5 | 9,2015,2022,1,1,1,1,1,1,1,1,0.65,
+LATE 19,lateralidad,tumor_core,Posible lateralidad,integer_like,0 | 1 | 2 | 3 | 4 | 9,2015,2022,1,1,1,1,1,1,1,1,5.62,possible_iarc_field=lateralidad; iarc_mapping_confidence=low
+MODIF,modif,administrative,,date_like,,2015,2022,1,1,1,1,1,1,1,1,0.64,
+MORF,morfologia_icdo,tumor_core,Posible morfología ICD-O,integer_like,,2015,2022,1,1,1,1,1,1,1,1,0.72,possible_iarc_field=morfologia_icdo; iarc_mapping_confidence=high
+PMSEQ,multiple_primary__pmseq,multiple_primary,,all_missing,,2015,2022,1,1,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; possible_iarc_field=multiple_primary; iarc_mapping_confidence=moderate; contains_structural_garbage_or_header_anomaly | mapped_to=iarc_multiple_primary_component
+PMTOT,multiple_primary__pmtot,multiple_primary,,all_missing,,2015,2022,1,1,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; possible_iarc_field=multiple_primary; iarc_mapping_confidence=moderate; contains_structural_garbage_or_header_anomaly | mapped_to=iarc_multiple_primary_component
+MX,mx,clinical_auxiliary,,categorical_like,M0 | M1 | M1A | MX | N0,2015,2022,1,1,1,1,1,1,1,1,63.67,
+NODOC,nodoc,identifier,,integer_like,,2015,2022,1,1,1,1,1,1,1,1,16.99,
+NOTIF,notif,administrative,,all_missing | categorical_like,NO ES CA,2015,2022,1,1,1,1,1,1,1,1,99.85,type_inconsistency=all_missing; categorical_like; quality_flags=all_missing; structural_garbage || near_empty || near_empty; constant; contains_structural_garbage_or_header_anomaly
+NUMPAT,numpat,identifier,,character_like,,2015,2022,1,1,1,1,1,1,1,1,6.54,quality_flags=high_cardinality_text
+NX,nx,clinical_auxiliary,,categorical_like | character_like,N0 | N1 | N1A | N1B | N1C | N2 | N3 | N3A | N3B | NX | PN0 | PNX,2015,2022,1,1,1,1,1,1,1,1,68.6,type_inconsistency=categorical_like; character_like
+OBS,obs,administrative,,character_like,,2015,2022,1,1,1,1,1,1,1,1,80.05,quality_flags=near_empty
+OBSOLETEFLAGPATIENTTABLE,obsoleteflagpatienttable,administrative,,all_missing,,2017,2022,0,0,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
+OBSOLETEFLAGTUMOURTABLE,obsoleteflagtumourtable,administrative,,all_missing,,2015,2022,1,1,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
+OCU,ocu,person_descriptive,,integer_like,,2015,2022,1,1,1,1,1,1,1,1,0.62,
+PAIS,pais,person_descriptive,,integer_like,179,2015,2022,1,1,1,1,1,1,1,1,1.55,quality_flags=constant
+PATIENTCHECKSTATUS,patientcheckstatus,administrative,,all_missing,,2017,2022,0,0,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
+PATIENTIDTUMOURTABLE,patientidtumourtable,identifier,,all_missing | categorical_like,LA MORFOLOGIA NO CORRESPONDE (8170/3),2015,2022,1,1,1,1,1,1,1,1,99.99,type_inconsistency=all_missing; categorical_like; quality_flags=all_missing; structural_garbage || near_empty; constant; contains_structural_garbage_or_header_anomaly
+PATIENTRECORDID,patientrecordid,identifier,,all_missing,,2017,2022,0,0,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
+PATIENTRECORDIDTUMOURTABLE,patientrecordidtumourtable,identifier,,all_missing,,2015,2022,1,1,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
+PATIENTRECORDSTATUS,patientrecordstatus,administrative,,all_missing,,2017,2022,0,0,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
+PATIENTUPDATEDATE,patientupdatedate,administrative,,all_missing,,2017,2022,0,0,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
+PATIENTUPDATEDBY,patientupdatedby,administrative,,all_missing,,2017,2022,0,0,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
+PMCOD,multiple_primary__pmcod,other,,all_missing,,2015,2022,1,1,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly | mapped_to=iarc_multiple_primary_component
+PROF,prof,administrative,,character_like,,2015,2022,1,1,1,1,1,1,1,1,73.24,
+DEPTRES,residencia__deptres,residence,Posible residencia,integer_like,03 | 04 | 08 | 11 | 12 | 15 | 17 | 18 | 2 | 21 | 23 | 3 | 4 | 5 | 8 | 9,2015,2022,1,1,1,1,1,1,1,1,0.58,possible_iarc_field=residencia; iarc_mapping_confidence=moderate | mapped_to=iarc_residencia_component
+PROVDIST,residencia__provdist,residence,Posible residencia,integer_like,,2015,2022,1,1,1,1,1,1,1,1,1.39,possible_iarc_field=residencia; iarc_mapping_confidence=moderate | mapped_to=iarc_residencia_component
+RES,residencia__res,residence,Posible residencia,all_missing,,2015,2022,1,1,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; possible_iarc_field=residencia; iarc_mapping_confidence=moderate; contains_structural_garbage_or_header_anomaly | mapped_to=iarc_residencia_component
+SEXO,sexo,demography,Posible sexo,integer_like,1 | 2,2015,2022,1,1,1,1,1,1,1,1,0.57,possible_iarc_field=sexo; iarc_mapping_confidence=high
+SOURCERECORDID,sourcerecordid,identifier,,all_missing,,2015,2022,1,1,0,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
+TIPO,tipo,person_descriptive,,integer_like,1 | 2,2015,2022,1,1,1,1,1,1,1,1,18.01,
+TIPOEST,tipoest,administrative,,integer_like,1 | 3 | 4,2015,2022,1,1,1,0,1,1,1,1,84.25,
+TOPO,topografia_icdo,tumor_core,Posible topografía ICD-O,integer_like,,2015,2022,1,1,1,1,1,1,1,1,0.92,possible_iarc_field=topografia_icdo; iarc_mapping_confidence=high
+TUMOURID,tumourid,identifier,,all_missing | categorical_like | character_like,MORFO 8720/3 | MORFO 9675/3,2015,2022,1,1,1,1,1,1,1,1,99.1,type_inconsistency=all_missing; categorical_like; character_like; quality_flags=all_missing; structural_garbage || near_empty; contains_structural_garbage_or_header_anomaly
+TUMOURIDSOURCETABLE,tumouridsourcetable,identifier,,all_missing,,2015,2022,1,1,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
+TUMOURUNDUPLICATIONSTATUS,tumourunduplicationstatus,administrative,,all_missing,,2015,2022,1,1,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
+TUMOURUPDATEDBY,tumourupdatedby,administrative,,all_missing,,2015,2022,1,1,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
+TX,tx,clinical_auxiliary,,character_like,PT1A | PT1B | pT2 | PT3 | pT3a | PT4A | T0 | T1 | T1b | T1C | T2 | T2A | T3 | T3b | T4 | T4A | T4B | TIS | TX,2015,2022,1,1,1,1,1,1,1,1,65.95,
+VERI,veri,administrative,,all_missing,,2015,2022,1,1,1,1,1,1,1,1,100,quality_flags=all_missing; structural_garbage; contains_structural_garbage_or_header_anomaly
