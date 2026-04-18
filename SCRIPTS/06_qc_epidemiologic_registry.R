@@ -129,9 +129,22 @@ col_basis_value <- pick_first_existing(dt, c("basis_of_diagnosis_value"), label 
 col_basis_group <- pick_first_existing(dt, c("basis_of_diagnosis_group"), label = "basis group")
 col_residence_area <- pick_first_existing(dt, c("residence_analytic_area"), label = "residence analytic area")
 col_vital_status <- pick_first_existing(dt, c("vital_status_analytic"), label = "vital status")
+col_vital_status_raw <- pick_first_existing(dt, c("vital_status_raw_mapped", "vital_status_analytic"), label = "vital status raw mapped")
+col_vital_status_resolved <- pick_first_existing(dt, c("vital_status_resolved_for_analysis"), label = "vital status resolved")
 col_laterality <- pick_first_existing(dt, c("laterality_analytic"), label = "laterality")
 col_incidence_included <- pick_first_existing(dt, c("analytic_inclusion_incidence"), label = "incidence included")
+col_incidence_included_official <- pick_first_existing(dt, c("analytic_inclusion_incidence_official", "analytic_inclusion_incidence"), label = "incidence included official")
+col_incidence_included_sensitivity <- pick_first_existing(dt, c("analytic_inclusion_incidence_sensitivity"), label = "incidence included sensitivity")
+col_incidence_date_status <- pick_first_existing(dt, c("incident_date_validity_status"), label = "incident date validity status")
+col_incidence_year_for_analysis <- pick_first_existing(dt, c("incident_year_for_analysis", "incident_year"), label = "incident year for analysis")
+col_incidence_rate_eligibility <- pick_first_existing(dt, c("incidence_rate_eligibility_status"), label = "incidence rate eligibility status")
 col_death_date <- pick_first_existing(dt, c("fecha_muerte"), label = "death date")
+col_death_date_raw_present <- pick_first_existing(dt, c("death_date_raw_present"), label = "death date raw present")
+col_death_date_valid <- pick_first_existing(dt, c("death_date_valid"), label = "death date valid")
+col_death_date_resolution_status <- pick_first_existing(dt, c("death_date_resolution_status"), label = "death date resolution status")
+col_death_year_for_analysis <- pick_first_existing(dt, c("death_year_for_analysis", "death_year"), label = "death year for analysis")
+col_mortality_official <- pick_first_existing(dt, c("analytic_inclusion_mortality_official", "analytic_inclusion_mortality"), label = "mortality official inclusion")
+col_mortality_sensitivity <- pick_first_existing(dt, c("analytic_inclusion_mortality_sensitivity"), label = "mortality sensitivity inclusion")
 
 flag_topography_missing <- pick_first_existing(dt, c("flag_topography_missing"), label = "flag_topography_missing")
 flag_morphology_missing <- pick_first_existing(dt, c("flag_morphology_missing"), label = "flag_morphology_missing")
@@ -142,6 +155,14 @@ flag_dead_without_death_date <- pick_first_existing(dt, c("flag_dead_without_dea
 flag_alive_with_death_date <- pick_first_existing(dt, c("flag_alive_with_death_date"), label = "flag_alive_with_death_date")
 flag_vital_inconsistency <- pick_first_existing(dt, c("flag_vital_inconsistency"), label = "flag_vital_inconsistency")
 flag_laterality_unknown <- pick_first_existing(dt, c("flag_laterality_unknown"), label = "flag_laterality_unknown")
+flag_death_placeholder <- pick_first_existing(dt, c("flag_death_date_placeholder_or_invalid"), label = "flag_death_date_placeholder_or_invalid")
+flag_death_before_diagnosis <- pick_first_existing(dt, c("flag_death_before_diagnosis"), label = "flag_death_before_diagnosis")
+flag_fuc_after_death <- pick_first_existing(dt, c("flag_fuc_after_death"), label = "flag_fuc_after_death")
+flag_proxy_fuc_candidate <- pick_first_existing(dt, c("flag_proxy_fuc_candidate"), label = "flag_proxy_fuc_candidate")
+flag_incident_placeholder <- pick_first_existing(dt, c("flag_incident_date_placeholder_or_invalid"), label = "flag_incident_date_placeholder_or_invalid")
+flag_incident_outside_period <- pick_first_existing(dt, c("flag_incident_date_outside_period"), label = "flag_incident_date_outside_period")
+flag_incident_missing <- pick_first_existing(dt, c("flag_incident_date_missing"), label = "flag_incident_date_missing")
+flag_incidence_crude_only <- pick_first_existing(dt, c("flag_incidence_crude_only_case"), label = "flag_incidence_crude_only_case")
 
 # =========================
 # 05. Derived working variables
@@ -161,9 +182,22 @@ dt_qc <- dt %>%
     qc_basis_group = safe_pull(., .env$col_basis_group),
     qc_residence_area = safe_pull(., .env$col_residence_area),
     qc_vital_status = safe_pull(., .env$col_vital_status),
+    qc_vital_status_raw = safe_pull(., .env$col_vital_status_raw),
+    qc_vital_status_resolved = safe_pull(., .env$col_vital_status_resolved),
     qc_laterality = safe_pull(., .env$col_laterality),
     qc_incidence_included_raw = safe_pull(., .env$col_incidence_included),
+    qc_incidence_included_official = safe_pull(., .env$col_incidence_included_official),
+    qc_incidence_included_sensitivity = safe_pull(., .env$col_incidence_included_sensitivity),
+    qc_incidence_date_status = safe_pull(., .env$col_incidence_date_status),
+    qc_incidence_year_for_analysis = safe_pull(., .env$col_incidence_year_for_analysis),
+    qc_incidence_rate_eligibility = safe_pull(., .env$col_incidence_rate_eligibility),
     qc_death_date = safe_pull(., .env$col_death_date),
+    qc_death_date_raw_present = safe_pull(., .env$col_death_date_raw_present),
+    qc_death_date_valid = safe_pull(., .env$col_death_date_valid),
+    qc_death_date_resolution_status = safe_pull(., .env$col_death_date_resolution_status),
+    qc_death_year_for_analysis = safe_pull(., .env$col_death_year_for_analysis),
+    qc_mortality_official = safe_pull(., .env$col_mortality_official),
+    qc_mortality_sensitivity = safe_pull(., .env$col_mortality_sensitivity),
     qc_flag_topography_missing = safe_pull(., .env$flag_topography_missing),
     qc_flag_morphology_missing = safe_pull(., .env$flag_morphology_missing),
     qc_flag_mv_candidate = safe_pull(., .env$flag_mv_candidate),
@@ -172,7 +206,15 @@ dt_qc <- dt %>%
     qc_flag_dead_without_death_date = safe_pull(., .env$flag_dead_without_death_date),
     qc_flag_alive_with_death_date = safe_pull(., .env$flag_alive_with_death_date),
     qc_flag_vital_inconsistency = safe_pull(., .env$flag_vital_inconsistency),
-    qc_flag_laterality_unknown = safe_pull(., .env$flag_laterality_unknown)
+    qc_flag_laterality_unknown = safe_pull(., .env$flag_laterality_unknown),
+    qc_flag_death_placeholder = safe_pull(., .env$flag_death_placeholder),
+    qc_flag_death_before_diagnosis = safe_pull(., .env$flag_death_before_diagnosis),
+    qc_flag_fuc_after_death = safe_pull(., .env$flag_fuc_after_death),
+    qc_flag_proxy_fuc_candidate = safe_pull(., .env$flag_proxy_fuc_candidate),
+    qc_flag_incident_placeholder = safe_pull(., .env$flag_incident_placeholder),
+    qc_flag_incident_outside_period = safe_pull(., .env$flag_incident_outside_period),
+    qc_flag_incident_missing = safe_pull(., .env$flag_incident_missing),
+    qc_flag_incidence_crude_only = safe_pull(., .env$flag_incidence_crude_only)
   ) %>%
   mutate(
     qc_incidence_included_norm = normalize_lower_chr(qc_incidence_included_raw),
@@ -374,6 +416,121 @@ qc_vital_by_year <- dt_qc %>%
   mutate(prop_within_year = n / sum(n)) %>%
   ungroup()
 write_csv_utf8(qc_vital_by_year, file.path(path_qc_data, "qc_vital_by_year.csv"))
+
+qc_raw_followup_external <- bind_rows(
+  build_indicator_row(dt_qc, "estvit_missing_raw", is_missing_like(dt_qc$qc_vital_status_raw)),
+  build_indicator_row(dt_qc, "fecdef_present_raw", as_true_vec(dt_qc$qc_death_date_raw_present)),
+  build_indicator_row(dt_qc, "fuc_present_raw", !is_missing_like(dt_qc$fecha_ultimo_contacto)),
+  build_indicator_row(dt_qc, "alive_with_any_fecdef_raw", as_true_vec(dt_qc$qc_flag_alive_with_death_date)),
+  build_indicator_row(dt_qc, "dead_without_any_fecdef_raw", as_true_vec(dt_qc$qc_flag_dead_without_death_date)),
+  build_indicator_row(dt_qc, "fecha_muerte_placeholder_or_invalid", as_true_vec(dt_qc$qc_flag_death_placeholder)),
+  build_indicator_row(dt_qc, "fecha_muerte_before_diagnostico", as_true_vec(dt_qc$qc_flag_death_before_diagnosis)),
+  build_indicator_row(dt_qc, "fuc_after_death", as_true_vec(dt_qc$qc_flag_fuc_after_death))
+)
+write_csv_utf8(qc_raw_followup_external, file.path(path_qc_data, "qc_raw_followup_external_summary.csv"))
+
+qc_raw_followup_cross <- dt_qc %>%
+  mutate(
+    qc_fecdef_state = case_when(
+      as_true_vec(qc_death_date_valid) ~ "valid_death_date",
+      as_true_vec(qc_death_date_raw_present) ~ "raw_date_present_invalid_or_placeholder",
+      TRUE ~ "no_death_date"
+    ),
+    qc_fuc_state = case_when(
+      is_missing_like(fecha_ultimo_contacto) ~ "no_fuc",
+      TRUE ~ "fuc_present"
+    )
+  ) %>%
+  count(qc_year, qc_vital_status_raw, qc_fecdef_state, qc_fuc_state, name = "n")
+write_csv_utf8(qc_raw_followup_cross, file.path(path_qc_data, "qc_raw_followup_cross.csv"))
+
+qc_internal_mortality_resolution <- dt_qc %>%
+  count(
+    qc_vital_status_raw,
+    qc_vital_status_resolved,
+    qc_death_date_resolution_status,
+    qc_mortality_official,
+    qc_mortality_sensitivity,
+    name = "n"
+  )
+write_csv_utf8(qc_internal_mortality_resolution, file.path(path_qc_data, "qc_internal_mortality_resolution.csv"))
+
+qc_internal_mortality_ruleset_impact <- bind_rows(
+  build_indicator_row(dt_qc, "official_mortality_yes", normalize_lower_chr(dt_qc$qc_mortality_official) == "yes"),
+  build_indicator_row(dt_qc, "sensitivity_mortality_yes", normalize_lower_chr(dt_qc$qc_mortality_sensitivity) == "yes"),
+  build_indicator_row(dt_qc, "proxy_fuc_candidate", as_true_vec(dt_qc$qc_flag_proxy_fuc_candidate))
+)
+write_csv_utf8(qc_internal_mortality_ruleset_impact, file.path(path_qc_data, "qc_internal_mortality_ruleset_impact.csv"))
+
+qc_mortality_conflict_case_review <- dt_qc %>%
+  filter(
+    as_true_vec(qc_flag_alive_with_death_date) |
+      as_true_vec(qc_flag_dead_without_death_date) |
+      as_true_vec(qc_flag_death_placeholder) |
+      as_true_vec(qc_flag_death_before_diagnosis) |
+      as_true_vec(qc_flag_fuc_after_death)
+  ) %>%
+  transmute(
+    row_id,
+    source_year = qc_year,
+    incident_year = qc_incidence_year_for_analysis,
+    sex = qc_sex,
+    age_group_iarc = qc_age_group,
+    topography_icdo = qc_topography,
+    vital_status_raw = qc_vital_status_raw,
+    vital_status_resolved = qc_vital_status_resolved,
+    fecha_diagnostico = fecha_diagnostico,
+    fecha_muerte = qc_death_date,
+    fecha_ultimo_contacto = fecha_ultimo_contacto,
+    death_date_resolution_status = qc_death_date_resolution_status,
+    mortality_official = qc_mortality_official,
+    mortality_sensitivity = qc_mortality_sensitivity,
+    alive_with_valid_fecha_muerte = as_true_vec(qc_flag_alive_with_death_date) & qc_death_date_resolution_status == "valid_consistent",
+    alive_with_placeholder_fecha_muerte = as_true_vec(qc_flag_alive_with_death_date) & qc_death_date_resolution_status == "placeholder_or_invalid",
+    fecha_muerte_before_diagnosis = as_true_vec(qc_flag_death_before_diagnosis),
+    fuc_after_death = as_true_vec(qc_flag_fuc_after_death),
+    dead_without_fecha_muerte = as_true_vec(qc_flag_dead_without_death_date)
+  )
+write_csv_utf8(qc_mortality_conflict_case_review, file.path(path_qc_data, "qc_mortality_conflict_case_review.csv"))
+
+qc_mortality_conflict_summary <- qc_mortality_conflict_case_review %>%
+  pivot_longer(
+    cols = c(alive_with_valid_fecha_muerte, alive_with_placeholder_fecha_muerte, fecha_muerte_before_diagnosis, fuc_after_death, dead_without_fecha_muerte),
+    names_to = "conflict_type",
+    values_to = "flag_value"
+  ) %>%
+  filter(flag_value) %>%
+  count(conflict_type, source_year, sex, age_group_iarc, topography_icdo, name = "n")
+write_csv_utf8(qc_mortality_conflict_summary, file.path(path_qc_data, "qc_mortality_conflict_summary.csv"))
+
+qc_incidence_raw_external <- bind_rows(
+  build_indicator_row(dt_qc, "fecdiag_missing_raw", is_missing_like(dt_qc$fecha_diagnostico)),
+  build_indicator_row(dt_qc, "incident_date_placeholder_or_invalid", as_true_vec(dt_qc$qc_flag_incident_placeholder)),
+  build_indicator_row(dt_qc, "incident_date_outside_period", as_true_vec(dt_qc$qc_flag_incident_outside_period)),
+  build_indicator_row(dt_qc, "incident_date_missing", as_true_vec(dt_qc$qc_flag_incident_missing)),
+  build_indicator_row(dt_qc, "residence_unknown_or_unspecified", dt_qc$qc_residence_unknown_derived | dt_qc$qc_residence_area %in% c("departamento_arequipa_unspecified_province")),
+  build_indicator_row(dt_qc, "topography_missing_raw_context", if (!is.na(flag_topography_missing)) as_true_vec(dt_qc$qc_flag_topography_missing) else dt_qc$qc_topography_missing_derived),
+  build_indicator_row(dt_qc, "morphology_missing_raw_context", if (!is.na(flag_morphology_missing)) as_true_vec(dt_qc$qc_flag_morphology_missing) else dt_qc$qc_morphology_missing_derived),
+  build_indicator_row(dt_qc, "basis_problematic_raw_context", dt_qc$qc_basis_unknown_derived)
+)
+write_csv_utf8(qc_incidence_raw_external, file.path(path_qc_data, "qc_incidence_raw_external_summary.csv"))
+
+qc_incidence_internal_resolution <- dt_qc %>%
+  count(
+    qc_incidence_date_status,
+    qc_incidence_included_official,
+    qc_incidence_rate_eligibility,
+    qc_sex,
+    name = "n"
+  )
+write_csv_utf8(qc_incidence_internal_resolution, file.path(path_qc_data, "qc_incidence_internal_resolution.csv"))
+
+qc_incidence_internal_ruleset_impact <- bind_rows(
+  build_indicator_row(dt_qc, "incidence_official_yes", normalize_lower_chr(dt_qc$qc_incidence_included_official) == "yes"),
+  build_indicator_row(dt_qc, "incidence_sensitivity_yes", normalize_lower_chr(dt_qc$qc_incidence_included_sensitivity) == "yes"),
+  build_indicator_row(dt_qc, "incidence_crude_only_cases", as_true_vec(dt_qc$qc_flag_incidence_crude_only))
+)
+write_csv_utf8(qc_incidence_internal_ruleset_impact, file.path(path_qc_data, "qc_incidence_internal_ruleset_impact.csv"))
 
 # =========================
 # 13. Topographies / sites

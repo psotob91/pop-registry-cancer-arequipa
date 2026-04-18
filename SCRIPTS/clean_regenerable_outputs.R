@@ -69,13 +69,25 @@ write_csv_utf8(
   manifest_path
 )
 
+delete_target <- function(path) {
+  if (file_exists(path)) {
+    suppressWarnings(fs::file_chmod(path, mode = "u+rw,go+rw"))
+    suppressWarnings(fs::file_delete(path))
+  }
+  if (dir_exists(path)) {
+    suppressWarnings(fs::dir_chmod(path, mode = "u+rwx,go+rwx", recurse = TRUE))
+    suppressWarnings(fs::dir_delete(path))
+  }
+}
+
 if (dry_run || confirm != "YES") {
   cli::cli_alert_info("Dry run de limpieza completado. Define CLEAN_DRY_RUN=false y CLEAN_CONFIRM=YES para borrar.")
   quit(save = "no", status = 0L)
 }
 
-purrr::walk(file_targets, ~ if (file_exists(.x)) fs::file_delete(.x))
-purrr::walk(dir_targets, ~ if (dir_exists(.x)) fs::dir_delete(.x))
+purrr::walk(file_targets, delete_target)
+purrr::walk(dir_targets, delete_target)
+suppressWarnings(fs::file_delete(manifest_path))
 
 residual_targets <- tibble(
   path = c(file_targets, dir_targets),

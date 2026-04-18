@@ -149,6 +149,13 @@ safe_parse_date <- function(x) {
   out
 }
 
+normalize_flag_text <- function(x) {
+  x %>%
+    as.character() %>%
+    stringr::str_trim() %>%
+    stringr::str_to_lower()
+}
+
 read_any_tabular <- function(path) {
   ext <- fs::path_ext(path)
   if (ext == "csv") return(readr::read_csv(path, show_col_types = FALSE))
@@ -423,7 +430,9 @@ master_paths <- list(
   value_dictionary = fs::path(metadata_dir, "MASTER_VALUE_DICTIONARY.csv"),
   residence_rules = fs::path(metadata_dir, "MASTER_RESIDENCE_RULES.csv"),
   analytic_flags = fs::path(metadata_dir, "MASTER_ANALYTIC_FLAGS_RULES.csv"),
-  age_group_rules = fs::path(metadata_dir, "MASTER_AGE_GROUP_RULES.csv")
+  age_group_rules = fs::path(metadata_dir, "MASTER_AGE_GROUP_RULES.csv"),
+  mortality_resolution_rules = fs::path(metadata_dir, "MASTER_MORTALITY_RESOLUTION_RULES.csv"),
+  incidence_resolution_rules = fs::path(metadata_dir, "MASTER_INCIDENCE_RESOLUTION_RULES.csv")
 )
 
 missing_masters <- names(master_paths)[!fs::file_exists(unlist(master_paths))]
@@ -441,12 +450,16 @@ value_dictionary <- readr::read_csv(master_paths$value_dictionary, show_col_type
 residence_rules <- readr::read_csv(master_paths$residence_rules, show_col_types = FALSE)
 analytic_flags_rules <- readr::read_csv(master_paths$analytic_flags, show_col_types = FALSE)
 age_group_rules <- readr::read_csv(master_paths$age_group_rules, show_col_types = FALSE)
+mortality_resolution_rules <- readr::read_csv(master_paths$mortality_resolution_rules, show_col_types = FALSE)
+incidence_resolution_rules <- readr::read_csv(master_paths$incidence_resolution_rules, show_col_types = FALSE)
 
 assert_columns(analytic_spec, c("analytic_variable", "source_variable", "transformation_rule"), "MASTER_ANALYTIC_DATASET_SPEC.csv")
 assert_columns(denominator_rules, c("rule_id", "analysis_domain", "denominator_mode", "geographic_scope", "status"), "MASTER_DENOMINATOR_RULES.csv")
 assert_columns(value_dictionary, c("variable_raw", "code_raw", "analytic_value", "analytic_group"), "MASTER_VALUE_DICTIONARY.csv")
 assert_columns(residence_rules, c("rule_id", "analytic_context", "priority_order", "source_variable", "status"), "MASTER_RESIDENCE_RULES.csv")
 assert_columns(age_group_rules, c("scheme_name", "age_lower", "age_upper", "label", "status"), "MASTER_AGE_GROUP_RULES.csv")
+assert_columns(mortality_resolution_rules, c("rule_set_id", "rule_set_role", "status", "default_for_analysis", "default_for_reporting"), "MASTER_MORTALITY_RESOLUTION_RULES.csv")
+assert_columns(incidence_resolution_rules, c("rule_set_id", "rule_set_role", "status", "default_for_analysis", "default_for_reporting"), "MASTER_INCIDENCE_RESOLUTION_RULES.csv")
 
 validate_value_dictionary_keys(value_dictionary)
 
@@ -503,7 +516,9 @@ fecha_ultimo_contacto_raw <- get_col_or_na(raw_df, c("fecha_ultimo_contacto", "f
 
 analytic_df <- raw_df %>%
   mutate(
-    incident_year = as.integer(lubridate::year(safe_parse_date(incident_date_raw))),
+    incident_date_raw = as.character(incident_date_raw),
+    incident_date_for_analysis = safe_parse_date(incident_date_raw),
+    incident_year = as.integer(lubridate::year(incident_date_for_analysis)),
     age_numeric = parse_numeric_loose(age_raw),
     age_numeric_clean = dplyr::if_else(!is.na(age_numeric) & age_numeric >= 0 & age_numeric <= 110, age_numeric, NA_real_),
     topography_icdo = clean_icdo_code(topography_raw),
@@ -579,28 +594,160 @@ residence_analytic_area_vec <- dplyr::case_when(
   TRUE ~ "outside_scope"
 )
 
-analytic_inclusion_incidence_vec <- dplyr::case_when(
-  residence_analytic_area_vec == "provincia_arequipa" ~ "yes",
+default_incidence_analysis_ruleset <- incidence_resolution_rules %>%
+  filter(status == "active", normalize_flag_text(default_for_analysis) == "yes") %>%
+  arrange(rule_set_id) %>%
+  slice(1)
+
+default_incidence_reporting_ruleset <- incidence_resolution_rules %>%
+  filter(status == "active", normalize_flag_text(default_for_reporting) == "yes") %>%
+  arrange(rule_set_id) %>%
+  slice(1)
+
+incident_date_raw_present_vec <- !is.na(analytic_df$incident_date_raw) & stringr::str_trim(analytic_df$incident_date_raw) != ""
+incident_year_raw_vec <- suppressWarnings(lubridate::year(analytic_df$incident_date_for_analysis))
+incident_date_placeholder_vec <- incident_date_raw_present_vec & (
+  is.na(analytic_df$incident_date_for_analysis) |
+    incident_year_raw_vec <= 1900
+)
+incident_date_validity_status_vec <- dplyr::case_when(
+  incident_date_raw_present_vec & incident_date_placeholder_vec ~ "placeholder_or_invalid",
+  !is.na(analytic_df$incident_date_for_analysis) & incident_year_raw_vec %in% 2015:2022 ~ "valid_consistent",
+  !is.na(analytic_df$incident_date_for_analysis) ~ "valid_but_outside_incidence_period",
+  TRUE ~ "no_incident_date_recorded"
+)
+incident_year_for_analysis_vec <- dplyr::if_else(
+  incident_date_validity_status_vec %in% c("valid_consistent", "valid_but_outside_incidence_period"),
+  incident_year_raw_vec,
+  NA_integer_
+)
+
+analytic_inclusion_incidence_official_vec <- dplyr::case_when(
+  residence_analytic_area_vec == "provincia_arequipa" & incident_date_validity_status_vec == "valid_consistent" ~ "yes",
+  residence_analytic_area_vec == "provincia_arequipa" & incident_date_validity_status_vec == "valid_but_outside_incidence_period" ~ "no",
+  residence_analytic_area_vec == "provincia_arequipa" ~ "unknown",
   residence_analytic_area_vec %in% c("departamento_arequipa_unspecified_province") ~ "unknown",
   is.na(residence_analytic_area_vec) ~ "unknown",
   TRUE ~ "no"
 )
 
-death_year_vec <- suppressWarnings(lubridate::year(analytic_df$fecha_muerte))
-death_event_official_vec <- !is.na(analytic_df$fecha_muerte)
-death_event_combined_vec <- death_event_official_vec | dplyr::coalesce(analytic_df$vital_status_analytic == "dead", FALSE)
-analytic_inclusion_mortality_vec <- dplyr::case_when(
+analytic_inclusion_incidence_sensitivity_vec <- analytic_inclusion_incidence_official_vec
+incidence_rate_eligibility_status_vec <- dplyr::case_when(
+  analytic_inclusion_incidence_official_vec == "yes" & !is.na(analytic_df$age_group_iarc) & !is.na(analytic_df$sex_analytic) & analytic_df$sex_analytic %in% c("male", "female") ~ "eligible_full_rates",
+  analytic_inclusion_incidence_official_vec == "yes" ~ "eligible_crude_only",
+  analytic_inclusion_incidence_official_vec == "unknown" ~ "unknown",
+  TRUE ~ "excluded"
+)
+
+analytic_inclusion_incidence_vec <- analytic_inclusion_incidence_official_vec
+
+default_analysis_ruleset <- mortality_resolution_rules %>%
+  filter(status == "active", normalize_flag_text(default_for_analysis) == "yes") %>%
+  arrange(rule_set_id) %>%
+  slice(1)
+
+default_reporting_ruleset <- mortality_resolution_rules %>%
+  filter(status == "active", normalize_flag_text(default_for_reporting) == "yes") %>%
+  arrange(rule_set_id) %>%
+  slice(1)
+
+death_date_raw_present_vec <- !is.na(analytic_df$fecha_muerte_raw) & stringr::str_trim(analytic_df$fecha_muerte_raw) != ""
+diagnosis_date_for_resolution_vec <- safe_parse_date(analytic_df$fecha_diagnostico)
+last_contact_date_for_resolution_vec <- safe_parse_date(analytic_df$fecha_ultimo_contacto)
+death_year_raw_vec <- suppressWarnings(lubridate::year(analytic_df$fecha_muerte))
+death_date_placeholder_vec <- death_date_raw_present_vec & (
+  is.na(analytic_df$fecha_muerte) |
+    death_year_raw_vec <= 1900
+)
+death_before_diagnosis_vec <- !death_date_placeholder_vec &
+  !is.na(analytic_df$fecha_muerte) &
+  !is.na(diagnosis_date_for_resolution_vec) &
+  analytic_df$fecha_muerte < diagnosis_date_for_resolution_vec &
+  !dplyr::coalesce(analytic_df$basis_of_diagnosis_value %in% c("dco", "autopsy"), FALSE)
+fuc_after_death_vec <- !death_date_placeholder_vec &
+  !is.na(analytic_df$fecha_muerte) &
+  !is.na(last_contact_date_for_resolution_vec) &
+  last_contact_date_for_resolution_vec > analytic_df$fecha_muerte
+death_date_valid_vec <- death_date_raw_present_vec & !death_date_placeholder_vec
+
+death_date_resolution_status_vec <- dplyr::case_when(
+  death_date_raw_present_vec & death_date_placeholder_vec ~ "placeholder_or_invalid",
+  death_date_valid_vec & (death_before_diagnosis_vec | fuc_after_death_vec) ~ "temporally_inconsistent",
+  death_date_valid_vec & death_year_raw_vec %in% 2015:2022 ~ "valid_consistent",
+  death_date_valid_vec ~ "valid_but_outside_mortality_period",
+  TRUE ~ "no_death_date_recorded"
+)
+
+death_date_for_analysis_vec <- dplyr::if_else(
+  death_date_resolution_status_vec %in% c("valid_consistent", "valid_but_outside_mortality_period"),
+  analytic_df$fecha_muerte,
+  as.Date(NA)
+)
+death_year_for_analysis_vec <- suppressWarnings(lubridate::year(death_date_for_analysis_vec))
+death_event_official_vec <- !is.na(death_date_for_analysis_vec)
+death_proxy_fuc_candidate_vec <- dplyr::coalesce(
+  analytic_df$vital_status_analytic == "dead" &
+    !death_event_official_vec &
+    !is.na(last_contact_date_for_resolution_vec) &
+    (is.na(diagnosis_date_for_resolution_vec) | last_contact_date_for_resolution_vec >= diagnosis_date_for_resolution_vec),
+  FALSE
+)
+death_proxy_fuc_date_vec <- dplyr::if_else(
+  death_proxy_fuc_candidate_vec,
+  last_contact_date_for_resolution_vec,
+  as.Date(NA)
+)
+death_proxy_fuc_year_vec <- suppressWarnings(lubridate::year(death_proxy_fuc_date_vec))
+
+vital_status_raw_mapped_vec <- analytic_df$vital_status_analytic
+vital_status_resolved_for_analysis_vec <- dplyr::case_when(
+  death_date_resolution_status_vec %in% c("valid_consistent", "valid_but_outside_mortality_period") ~ "dead",
+  vital_status_raw_mapped_vec == "dead" & death_date_resolution_status_vec %in% c("no_death_date_recorded", "placeholder_or_invalid", "temporally_inconsistent") ~ "conflict_needs_rule",
+  vital_status_raw_mapped_vec == "alive" ~ "alive",
+  vital_status_raw_mapped_vec == "dead" ~ "dead",
+  TRUE ~ "unknown_or_unresolved"
+)
+
+death_event_resolved_vec <- death_event_official_vec | vital_status_resolved_for_analysis_vec == "dead"
+death_event_proxy_fuc_vec <- death_proxy_fuc_candidate_vec & !is.na(death_proxy_fuc_year_vec)
+death_event_combined_vec <- death_event_official_vec | death_event_proxy_fuc_vec | dplyr::coalesce(vital_status_raw_mapped_vec == "dead", FALSE)
+
+analytic_inclusion_mortality_official_vec <- dplyr::case_when(
   analytic_inclusion_incidence_vec == "yes" &
     death_event_official_vec &
-    !is.na(death_year_vec) &
-    death_year_vec %in% 2015:2022 ~ "yes",
+    !is.na(death_year_for_analysis_vec) &
+    death_year_for_analysis_vec %in% 2015:2022 ~ "yes",
   analytic_inclusion_incidence_vec == "yes" &
     death_event_official_vec &
-    !is.na(death_year_vec) &
-    !death_year_vec %in% 2015:2022 ~ "no",
+    !is.na(death_year_for_analysis_vec) &
+    !death_year_for_analysis_vec %in% 2015:2022 ~ "no",
   analytic_inclusion_incidence_vec == "yes" &
-    dplyr::coalesce(analytic_df$vital_status_analytic == "dead", FALSE) &
-    is.na(death_year_vec) ~ "unknown",
+    (death_proxy_fuc_candidate_vec | dplyr::coalesce(vital_status_raw_mapped_vec == "dead", FALSE)) ~ "unknown",
+  analytic_inclusion_incidence_vec == "unknown" &
+    death_event_combined_vec ~ "unknown",
+  analytic_inclusion_incidence_vec == "unknown" ~ "unknown",
+  TRUE ~ "no"
+)
+
+analytic_inclusion_mortality_sensitivity_vec <- dplyr::case_when(
+  analytic_inclusion_incidence_vec == "yes" &
+    death_event_official_vec &
+    !is.na(death_year_for_analysis_vec) &
+    death_year_for_analysis_vec %in% 2015:2022 ~ "yes",
+  analytic_inclusion_incidence_vec == "yes" &
+    !death_event_official_vec &
+    death_event_proxy_fuc_vec &
+    death_proxy_fuc_year_vec %in% 2015:2022 ~ "yes",
+  analytic_inclusion_incidence_vec == "yes" &
+    death_event_official_vec &
+    !is.na(death_year_for_analysis_vec) &
+    !death_year_for_analysis_vec %in% 2015:2022 ~ "no",
+  analytic_inclusion_incidence_vec == "yes" &
+    death_event_proxy_fuc_vec &
+    !is.na(death_proxy_fuc_year_vec) &
+    !death_proxy_fuc_year_vec %in% 2015:2022 ~ "no",
+  analytic_inclusion_incidence_vec == "yes" &
+    (death_proxy_fuc_candidate_vec | dplyr::coalesce(vital_status_raw_mapped_vec == "dead", FALSE)) ~ "unknown",
   analytic_inclusion_incidence_vec == "unknown" &
     death_event_combined_vec ~ "unknown",
   analytic_inclusion_incidence_vec == "unknown" ~ "unknown",
@@ -613,11 +760,35 @@ analytic_df <- analytic_df %>%
     residence_analytic_value = residence_analytic_value_vec,
     residence_department = residence_department_vec,
     residence_analytic_area = residence_analytic_area_vec,
+    incident_date_raw_present = incident_date_raw_present_vec,
+    incident_date_validity_status = incident_date_validity_status_vec,
+    incident_year_for_analysis = incident_year_for_analysis_vec,
     analytic_inclusion_incidence = analytic_inclusion_incidence_vec,
-    death_year = death_year_vec,
+    analytic_inclusion_incidence_official = analytic_inclusion_incidence_official_vec,
+    analytic_inclusion_incidence_sensitivity = analytic_inclusion_incidence_sensitivity_vec,
+    incidence_rate_eligibility_status = incidence_rate_eligibility_status_vec,
+    incidence_ruleset_applied = default_incidence_analysis_ruleset$rule_set_id[[1]] %||% "analysis_default_incidence",
+    incidence_ruleset_reporting = default_incidence_reporting_ruleset$rule_set_id[[1]] %||% "official_strict_incidence",
+    vital_status_raw_mapped = vital_status_raw_mapped_vec,
+    vital_status_resolved_for_analysis = vital_status_resolved_for_analysis_vec,
+    death_date_raw_present = death_date_raw_present_vec,
+    death_date_valid = death_event_official_vec,
+    death_date_resolution_status = death_date_resolution_status_vec,
+    death_date_for_analysis = death_date_for_analysis_vec,
+    death_year = death_year_for_analysis_vec,
+    death_year_for_analysis = death_year_for_analysis_vec,
+    death_proxy_fuc_candidate = death_proxy_fuc_candidate_vec,
+    death_proxy_fuc_date = death_proxy_fuc_date_vec,
+    death_proxy_fuc_year = death_proxy_fuc_year_vec,
+    death_event_resolved = death_event_resolved_vec,
+    death_event_proxy_fuc = death_event_proxy_fuc_vec,
     death_event_official = death_event_official_vec,
     death_event_combined = death_event_combined_vec,
-    analytic_inclusion_mortality = analytic_inclusion_mortality_vec
+    analytic_inclusion_mortality = analytic_inclusion_mortality_official_vec,
+    analytic_inclusion_mortality_official = analytic_inclusion_mortality_official_vec,
+    analytic_inclusion_mortality_sensitivity = analytic_inclusion_mortality_sensitivity_vec,
+    mortality_ruleset_applied = default_analysis_ruleset$rule_set_id[[1]] %||% "analysis_default_date_precedence",
+    mortality_ruleset_reporting = default_reporting_ruleset$rule_set_id[[1]] %||% "official_strict_iarc"
   )
 
 # ------------------------------------------------------------
@@ -630,15 +801,27 @@ analytic_df <- analytic_df %>%
     flag_morphology_missing = is.na(morphology_icdo),
     flag_mv_candidate = basis_of_diagnosis_value %in% c("cytology", "histology_metastasis", "histology_primary"),
     flag_dco_candidate = basis_of_diagnosis_value %in% c("dco"),
-    flag_dead_without_death_date = dplyr::coalesce(vital_status_analytic == "dead" & is.na(fecha_muerte), FALSE),
-    flag_alive_with_death_date = dplyr::coalesce(vital_status_analytic == "alive" & !is.na(fecha_muerte), FALSE),
+    flag_dead_without_death_date = dplyr::coalesce(vital_status_raw_mapped == "dead" & death_date_resolution_status == "no_death_date_recorded", FALSE),
+    flag_alive_with_death_date = dplyr::coalesce(vital_status_raw_mapped == "alive" & death_date_raw_present, FALSE),
     flag_vital_date_conflict = flag_dead_without_death_date | flag_alive_with_death_date,
     flag_vital_inconsistency = flag_vital_date_conflict |
-      dplyr::coalesce((!is.na(fecha_muerte) & !is.na(fecha_ultimo_contacto) & fecha_ultimo_contacto < fecha_muerte), FALSE),
+      dplyr::coalesce((!is.na(fecha_muerte) & !is.na(fecha_ultimo_contacto) & fecha_ultimo_contacto > fecha_muerte), FALSE),
     flag_residence_unknown = is.na(residence_analytic_value) & is.na(residence_department),
     flag_incidence_exclusion_nonresident = analytic_inclusion_incidence == "no",
-    flag_mortality_exclusion_nonresident = analytic_inclusion_mortality == "no",
-    flag_mortality_missing_death_year = dplyr::coalesce(vital_status_analytic == "dead" & is.na(death_year), FALSE),
+    flag_incident_date_placeholder_or_invalid = incident_date_validity_status == "placeholder_or_invalid",
+    flag_incident_date_outside_period = incident_date_validity_status == "valid_but_outside_incidence_period",
+    flag_incident_date_missing = incident_date_validity_status == "no_incident_date_recorded",
+    flag_incidence_missing_age_group_for_rates = analytic_inclusion_incidence_official == "yes" & is.na(age_group_iarc),
+    flag_incidence_crude_only_case = incidence_rate_eligibility_status == "eligible_crude_only",
+    flag_mortality_exclusion_nonresident = analytic_inclusion_mortality_official == "no",
+    flag_mortality_missing_death_year = dplyr::coalesce(vital_status_raw_mapped == "dead" & is.na(death_year_for_analysis), FALSE),
+    flag_death_date_placeholder_or_invalid = death_date_resolution_status == "placeholder_or_invalid",
+    flag_death_date_temporally_inconsistent = death_date_resolution_status == "temporally_inconsistent",
+    flag_death_before_diagnosis = death_before_diagnosis_vec,
+    flag_fuc_after_death = fuc_after_death_vec,
+    flag_death_outside_mortality_period = death_date_resolution_status == "valid_but_outside_mortality_period",
+    flag_vital_status_unknown_raw = is.na(vital_status_raw_mapped) | vital_status_raw_mapped == "unknown_or_unresolved",
+    flag_proxy_fuc_candidate = death_proxy_fuc_candidate,
     flag_age_unknown = is.na(age_numeric),
     flag_age_implausible = !is.na(age_numeric) & is.na(age_numeric_clean),
     flag_sex_unknown = is.na(sex_analytic) | sex_analytic == "unknown",
@@ -661,6 +844,13 @@ harm_long_path <- resolve_path("DATA/DERIVED/rcpa_arequipa_2015_2022_harmonized_
 
 qc_mortality_traceability <- NULL
 qc_mortality_discordance <- NULL
+qc_mortality_resolution_summary <- NULL
+qc_mortality_ruleset_impact <- NULL
+qc_raw_followup_capture_summary <- NULL
+qc_raw_followup_conflicts_by_year <- NULL
+qc_incidence_resolution_summary <- NULL
+qc_incidence_ruleset_impact <- NULL
+qc_incidence_crude_only_cases <- NULL
 
 if (fs::file_exists(raw_exact_path) && fs::file_exists(harm_long_path)) {
   raw_exact <- readRDS(raw_exact_path) %>% as_tibble()
@@ -734,18 +924,123 @@ if (fs::file_exists(raw_exact_path) && fs::file_exists(harm_long_path)) {
       sex_analytic = sex_analytic,
       age_group_iarc = age_group_iarc,
       topography_icdo = topography_icdo,
-      vital_status_analytic = vital_status_analytic,
-      has_fecha_muerte = !is.na(fecha_muerte),
-      death_year = death_year,
+      vital_status_raw_mapped = vital_status_raw_mapped,
+      vital_status_resolved_for_analysis = vital_status_resolved_for_analysis,
+      death_date_raw_present = death_date_raw_present,
+      death_date_valid = death_date_valid,
+      death_date_resolution_status = death_date_resolution_status,
+      death_year = death_year_for_analysis,
+      death_proxy_fuc_candidate = death_proxy_fuc_candidate,
       discordance_type = dplyr::case_when(
-        vital_status_analytic == "alive" & has_fecha_muerte ~ "alive_with_fecha_muerte",
-        vital_status_analytic == "dead" & !has_fecha_muerte ~ "dead_without_fecha_muerte",
-        has_fecha_muerte & !is.na(death_year) & !death_year %in% 2015:2022 ~ "fecha_muerte_outside_period",
-        has_fecha_muerte & is.na(death_year) ~ "fecha_muerte_unparseable",
+        vital_status_raw_mapped == "alive" & death_date_resolution_status %in% c("valid_consistent", "valid_but_outside_mortality_period") ~ "alive_with_valid_fecha_muerte",
+        vital_status_raw_mapped == "alive" & death_date_resolution_status == "placeholder_or_invalid" ~ "alive_with_placeholder_fecha_muerte",
+        vital_status_raw_mapped == "dead" & death_date_resolution_status == "no_death_date_recorded" ~ "dead_without_fecha_muerte",
+        death_date_resolution_status == "valid_but_outside_mortality_period" ~ "fecha_muerte_outside_period",
+        death_date_resolution_status == "temporally_inconsistent" & flag_death_before_diagnosis ~ "fecha_muerte_before_diagnosis",
+        death_date_resolution_status == "temporally_inconsistent" & flag_fuc_after_death ~ "fuc_after_death",
+        death_date_resolution_status == "placeholder_or_invalid" ~ "fecha_muerte_placeholder_or_invalid",
         TRUE ~ NA_character_
       )
     ) %>%
     filter(!is.na(discordance_type))
+
+  qc_mortality_resolution_summary <- analytic_df %>%
+    count(
+      vital_status_raw_mapped,
+      vital_status_resolved_for_analysis,
+      death_date_resolution_status,
+      analytic_inclusion_mortality_official,
+      analytic_inclusion_mortality_sensitivity,
+      name = "n"
+    )
+
+  qc_mortality_ruleset_impact <- tibble(
+    ruleset = c("official_strict_iarc", "analysis_default_date_precedence", "sensitivity_dead_with_fuc_proxy"),
+    deaths_in_period = c(
+      sum(analytic_df$analytic_inclusion_mortality_official == "yes", na.rm = TRUE),
+      sum(analytic_df$death_event_resolved & analytic_df$analytic_inclusion_incidence == "yes" & !is.na(analytic_df$death_year_for_analysis) & analytic_df$death_year_for_analysis %in% 2015:2022, na.rm = TRUE),
+      sum(analytic_df$analytic_inclusion_mortality_sensitivity == "yes", na.rm = TRUE)
+    ),
+    unresolved_dead_signals = c(
+      sum(analytic_df$vital_status_raw_mapped == "dead" & analytic_df$analytic_inclusion_mortality_official == "unknown", na.rm = TRUE),
+      sum(analytic_df$vital_status_resolved_for_analysis == "conflict_needs_rule", na.rm = TRUE),
+      sum(analytic_df$death_proxy_fuc_candidate, na.rm = TRUE)
+    )
+  )
+
+  qc_raw_followup_capture_summary <- tibble(
+    indicator = c(
+      "estvit_nonmissing_raw",
+      "fecdef_nonmissing_raw",
+      "fuc_nonmissing_raw",
+      "alive_with_any_fecdef_raw",
+      "dead_without_any_fecdef_raw",
+      "fecha_muerte_placeholder_or_invalid",
+      "fecha_muerte_before_diagnosis",
+      "fuc_after_death"
+    ),
+    numerator = c(
+      sum(!is.na(analytic_df$estado_vital) & as.character(analytic_df$estado_vital) != "", na.rm = TRUE),
+      sum(death_date_raw_present_vec, na.rm = TRUE),
+      sum(!is.na(analytic_df$fecha_ultimo_contacto_raw) & analytic_df$fecha_ultimo_contacto_raw != "", na.rm = TRUE),
+      sum(analytic_df$vital_status_raw_mapped == "alive" & death_date_raw_present_vec, na.rm = TRUE),
+      sum(analytic_df$vital_status_raw_mapped == "dead" & !death_date_raw_present_vec, na.rm = TRUE),
+      sum(analytic_df$flag_death_date_placeholder_or_invalid, na.rm = TRUE),
+      sum(analytic_df$flag_death_before_diagnosis, na.rm = TRUE),
+      sum(analytic_df$flag_fuc_after_death, na.rm = TRUE)
+    ),
+    denominator = nrow(analytic_df),
+    percent = 100 * numerator / denominator
+  )
+
+  qc_raw_followup_conflicts_by_year <- analytic_df %>%
+    count(
+      source_year,
+      alive_with_any_fecdef_raw = flag_alive_with_death_date,
+      dead_without_any_fecdef_raw = flag_dead_without_death_date,
+      fecha_muerte_placeholder_or_invalid = flag_death_date_placeholder_or_invalid,
+      fecha_muerte_before_diagnosis = flag_death_before_diagnosis,
+      fuc_after_death = flag_fuc_after_death,
+      name = "n"
+    ) %>%
+    filter(alive_with_any_fecdef_raw | dead_without_any_fecdef_raw | fecha_muerte_placeholder_or_invalid | fecha_muerte_before_diagnosis | fuc_after_death)
+
+  qc_incidence_resolution_summary <- analytic_df %>%
+    count(
+      incident_date_validity_status,
+      analytic_inclusion_incidence_official,
+      incidence_rate_eligibility_status,
+      sex_analytic,
+      name = "n"
+    )
+
+  qc_incidence_ruleset_impact <- tibble(
+    ruleset = c("official_strict_incidence", "analysis_default_incidence"),
+    incident_cases_official = c(
+      sum(analytic_df$analytic_inclusion_incidence_official == "yes", na.rm = TRUE),
+      sum(analytic_df$analytic_inclusion_incidence == "yes", na.rm = TRUE)
+    ),
+    crude_only_cases = c(
+      sum(analytic_df$incidence_rate_eligibility_status == "eligible_crude_only", na.rm = TRUE),
+      sum(analytic_df$incidence_rate_eligibility_status == "eligible_crude_only", na.rm = TRUE)
+    )
+  )
+
+  qc_incidence_crude_only_cases <- analytic_df %>%
+    filter(incidence_rate_eligibility_status == "eligible_crude_only") %>%
+    transmute(
+      row_id,
+      source_year,
+      incident_year_for_analysis,
+      sex_analytic,
+      age_numeric,
+      age_group_iarc,
+      topography_icdo,
+      morphology_icdo,
+      basis_of_diagnosis_value,
+      residence_analytic_area,
+      incident_date_validity_status
+    )
   
   write_csv(
     qc_mortality_traceability,
@@ -755,6 +1050,41 @@ if (fs::file_exists(raw_exact_path) && fs::file_exists(harm_long_path)) {
   write_csv(
     qc_mortality_discordance,
     fs::path(qc_dir, "qc_mortality_vital_date_discordance.csv"),
+    na = ""
+  )
+  write_csv(
+    qc_mortality_resolution_summary,
+    fs::path(qc_dir, "qc_mortality_resolution_summary.csv"),
+    na = ""
+  )
+  write_csv(
+    qc_mortality_ruleset_impact,
+    fs::path(qc_dir, "qc_mortality_ruleset_impact.csv"),
+    na = ""
+  )
+  write_csv(
+    qc_raw_followup_capture_summary,
+    fs::path(qc_dir, "qc_raw_followup_capture_summary.csv"),
+    na = ""
+  )
+  write_csv(
+    qc_raw_followup_conflicts_by_year,
+    fs::path(qc_dir, "qc_raw_followup_conflicts_by_year.csv"),
+    na = ""
+  )
+  write_csv(
+    qc_incidence_resolution_summary,
+    fs::path(qc_dir, "qc_incidence_resolution_summary.csv"),
+    na = ""
+  )
+  write_csv(
+    qc_incidence_ruleset_impact,
+    fs::path(qc_dir, "qc_incidence_ruleset_impact.csv"),
+    na = ""
+  )
+  write_csv(
+    qc_incidence_crude_only_cases,
+    fs::path(qc_dir, "qc_incidence_crude_only_cases.csv"),
     na = ""
   )
 }
@@ -804,6 +1134,11 @@ if (length(residual_cols) > 0) {
 # ------------------------------------------------------------
 preferred_order <- c(
   "incident_year",
+  "incident_date_raw",
+  "incident_date_raw_present",
+  "incident_date_validity_status",
+  "incident_date_for_analysis",
+  "incident_year_for_analysis",
   "sex_analytic",
   "age_numeric",
   "age_numeric_clean",
@@ -816,16 +1151,37 @@ preferred_order <- c(
   "basis_of_diagnosis_group",
   "basis_of_diagnosis_label_local",
   "vital_status_analytic",
+  "vital_status_raw_mapped",
+  "vital_status_resolved_for_analysis",
   "laterality_analytic",
   "residence_analytic_source",
   "residence_analytic_value",
   "residence_department",
   "residence_analytic_area",
   "analytic_inclusion_incidence",
+  "analytic_inclusion_incidence_official",
+  "analytic_inclusion_incidence_sensitivity",
+  "incidence_rate_eligibility_status",
+  "incidence_ruleset_applied",
+  "incidence_ruleset_reporting",
+  "death_date_raw_present",
+  "death_date_valid",
+  "death_date_resolution_status",
+  "death_date_for_analysis",
   "death_year",
+  "death_year_for_analysis",
+  "death_proxy_fuc_candidate",
+  "death_proxy_fuc_date",
+  "death_proxy_fuc_year",
   "death_event_official",
+  "death_event_resolved",
+  "death_event_proxy_fuc",
   "death_event_combined",
   "analytic_inclusion_mortality",
+  "analytic_inclusion_mortality_official",
+  "analytic_inclusion_mortality_sensitivity",
+  "mortality_ruleset_applied",
+  "mortality_ruleset_reporting",
   "denominator_mode_active",
   "denominator_scope_active",
   "denominator_reference_year",
@@ -839,8 +1195,20 @@ preferred_order <- c(
   "flag_alive_with_death_date",
   "flag_vital_date_conflict",
   "flag_vital_inconsistency",
+  "flag_death_date_placeholder_or_invalid",
+  "flag_death_date_temporally_inconsistent",
+  "flag_death_before_diagnosis",
+  "flag_fuc_after_death",
+  "flag_death_outside_mortality_period",
+  "flag_vital_status_unknown_raw",
+  "flag_proxy_fuc_candidate",
   "flag_residence_unknown",
   "flag_incidence_exclusion_nonresident",
+  "flag_incident_date_placeholder_or_invalid",
+  "flag_incident_date_outside_period",
+  "flag_incident_date_missing",
+  "flag_incidence_missing_age_group_for_rates",
+  "flag_incidence_crude_only_case",
   "flag_mortality_exclusion_nonresident",
   "flag_mortality_missing_death_year",
   "flag_age_unknown",
@@ -887,10 +1255,13 @@ qc_summary_final <- analytic_df %>%
     n_incidence_yes = sum(analytic_inclusion_incidence == "yes", na.rm = TRUE),
     n_incidence_no = sum(analytic_inclusion_incidence == "no", na.rm = TRUE),
     n_incidence_unknown = sum(analytic_inclusion_incidence == "unknown", na.rm = TRUE),
+    n_incidence_crude_only = sum(flag_incidence_crude_only_case, na.rm = TRUE),
     n_mortality_yes = sum(analytic_inclusion_mortality == "yes", na.rm = TRUE),
     n_mortality_no = sum(analytic_inclusion_mortality == "no", na.rm = TRUE),
     n_mortality_unknown = sum(analytic_inclusion_mortality == "unknown", na.rm = TRUE),
     n_death_event_official = sum(death_event_official, na.rm = TRUE),
+    n_death_event_resolved = sum(death_event_resolved, na.rm = TRUE),
+    n_death_event_proxy_fuc = sum(death_event_proxy_fuc, na.rm = TRUE),
     n_death_event_combined = sum(death_event_combined, na.rm = TRUE),
     n_missing_sex = sum(flag_sex_unknown, na.rm = TRUE),
     n_missing_age = sum(flag_age_unknown, na.rm = TRUE),
@@ -907,6 +1278,15 @@ qc_summary_final <- analytic_df %>%
     n_vital_date_conflict = sum(flag_vital_date_conflict, na.rm = TRUE),
     n_vital_inconsistency = sum(flag_vital_inconsistency, na.rm = TRUE),
     n_mortality_missing_death_year = sum(flag_mortality_missing_death_year, na.rm = TRUE),
+    n_death_date_placeholder_or_invalid = sum(flag_death_date_placeholder_or_invalid, na.rm = TRUE),
+    n_death_date_temporally_inconsistent = sum(flag_death_date_temporally_inconsistent, na.rm = TRUE),
+    n_death_before_diagnosis = sum(flag_death_before_diagnosis, na.rm = TRUE),
+    n_fuc_after_death = sum(flag_fuc_after_death, na.rm = TRUE),
+    n_proxy_fuc_candidate = sum(flag_proxy_fuc_candidate, na.rm = TRUE),
+    n_incident_date_placeholder_or_invalid = sum(flag_incident_date_placeholder_or_invalid, na.rm = TRUE),
+    n_incident_date_outside_period = sum(flag_incident_date_outside_period, na.rm = TRUE),
+    n_incident_date_missing = sum(flag_incident_date_missing, na.rm = TRUE),
+    n_incidence_missing_age_group_for_rates = sum(flag_incidence_missing_age_group_for_rates, na.rm = TRUE),
     pct_missing_sex = 100 * mean(flag_sex_unknown, na.rm = TRUE),
     pct_missing_age = 100 * mean(flag_age_unknown, na.rm = TRUE),
     pct_age_implausible = 100 * mean(flag_age_implausible, na.rm = TRUE),
@@ -919,7 +1299,16 @@ qc_summary_final <- analytic_df %>%
     pct_psu_candidate = 100 * mean(flag_psu_candidate, na.rm = TRUE),
     pct_vital_date_conflict = 100 * mean(flag_vital_date_conflict, na.rm = TRUE),
     pct_vital_inconsistency = 100 * mean(flag_vital_inconsistency, na.rm = TRUE),
-    pct_mortality_missing_death_year = 100 * mean(flag_mortality_missing_death_year, na.rm = TRUE)
+    pct_mortality_missing_death_year = 100 * mean(flag_mortality_missing_death_year, na.rm = TRUE),
+    pct_death_date_placeholder_or_invalid = 100 * mean(flag_death_date_placeholder_or_invalid, na.rm = TRUE),
+    pct_death_date_temporally_inconsistent = 100 * mean(flag_death_date_temporally_inconsistent, na.rm = TRUE),
+    pct_death_before_diagnosis = 100 * mean(flag_death_before_diagnosis, na.rm = TRUE),
+    pct_fuc_after_death = 100 * mean(flag_fuc_after_death, na.rm = TRUE),
+    pct_proxy_fuc_candidate = 100 * mean(flag_proxy_fuc_candidate, na.rm = TRUE),
+    pct_incident_date_placeholder_or_invalid = 100 * mean(flag_incident_date_placeholder_or_invalid, na.rm = TRUE),
+    pct_incident_date_outside_period = 100 * mean(flag_incident_date_outside_period, na.rm = TRUE),
+    pct_incident_date_missing = 100 * mean(flag_incident_date_missing, na.rm = TRUE),
+    pct_incidence_missing_age_group_for_rates = 100 * mean(flag_incidence_missing_age_group_for_rates, na.rm = TRUE)
   )
 
 # ------------------------------------------------------------
@@ -947,6 +1336,11 @@ flag_summary <- summarise_flags(
     "flag_mv_candidate", "flag_dco_candidate",
     "flag_dead_without_death_date", "flag_alive_with_death_date", "flag_vital_inconsistency",
     "flag_vital_date_conflict",
+    "flag_incident_date_placeholder_or_invalid", "flag_incident_date_outside_period",
+    "flag_incident_date_missing", "flag_incidence_missing_age_group_for_rates", "flag_incidence_crude_only_case",
+    "flag_death_date_placeholder_or_invalid", "flag_death_date_temporally_inconsistent",
+    "flag_death_before_diagnosis", "flag_fuc_after_death", "flag_death_outside_mortality_period",
+    "flag_vital_status_unknown_raw", "flag_proxy_fuc_candidate",
     "flag_residence_unknown", "flag_incidence_exclusion_nonresident",
     "flag_mortality_exclusion_nonresident", "flag_mortality_missing_death_year",
     "flag_age_unknown", "flag_age_implausible", "flag_sex_unknown", "flag_basis_unknown",

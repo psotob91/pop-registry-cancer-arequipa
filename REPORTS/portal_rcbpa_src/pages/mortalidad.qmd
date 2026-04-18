@@ -8,6 +8,7 @@ library(fs)
 root <- normalizePath("..\\..\\..", winslash = "/", mustWork = TRUE)
 read_csv_safe <- function(...) readr::read_csv(fs::path(root, ...), show_col_types = FALSE)
 asr <- read_csv_safe("DATA","DERIVED","RATES","mortality_rates_asr_period.csv")
+asr_sensitivity <- read_csv_safe("DATA","DERIVED","RATES","mortality_rates_sensitivity_asr_period.csv")
 annual <- read_csv_safe("DATA","DERIVED","RATES","mortality_rates_crude_annual.csv")
 top10 <- read_csv_safe("DATA","DERIVED","RATES","mortality_rates_top10_by_sex_period.csv")
 sensitivity <- read_csv_safe("DATA","DERIVED","RATES","mortality_sensitivity_summary.csv")
@@ -16,6 +17,13 @@ without_date <- read_csv_safe("DATA","DERIVED","RATES","mortality_sensitivity_de
 
 ```{r}
 asr %>% knitr::kable()
+```
+
+```{r}
+bind_rows(
+  asr %>% mutate(ruleset = "official_strict_iarc"),
+  asr_sensitivity %>% mutate(ruleset = "sensitivity_dead_with_fuc_proxy")
+) %>% knitr::kable()
 ```
 
 ```{r}

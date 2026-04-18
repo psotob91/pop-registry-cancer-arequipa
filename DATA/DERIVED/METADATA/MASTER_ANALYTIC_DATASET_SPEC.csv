@@ -33,8 +33,24 @@ flag_age_unknown,age_numeric,derived,apply MASTER_ANALYTIC_FLAGS_RULES,binary,fa
 flag_sex_unknown,sex_analytic,derived,apply MASTER_ANALYTIC_FLAGS_RULES,binary,false,false,all,none,logical,0,0,1,QC indicator component
 death_year,fecha_muerte,derived,extract year from parsed death date,calendar year of death,missing_if_unparseable,not_applicable,all,none,integer,0,1,1,Main denominator alignment variable for mortality
 death_event_official,fecha_muerte,derived,non-missing parsed fecha_muerte => TRUE,binary official death event,false,false,all,none,logical,0,1,1,Primary evidence of registered death event
+vital_status_raw_mapped,estado_vital,derived,preserve mapped ESTVIT before resolution,alive/dead/unknown_or_unresolved,unknown,unknown,all,none,factor,0,1,1,Raw-mapped status for audit versus resolution
+vital_status_resolved_for_analysis,estado_vital|fecha_muerte|fecha_ultimo_contacto,derived,apply MASTER_MORTALITY_RESOLUTION_RULES to resolve final analytic status,alive/dead/conflict_needs_rule/unknown_or_unresolved,unknown,unknown,all,none,factor,0,1,1,Fecha de muerte valida prevalece sobre ESTVIT
+death_date_raw_present,fecha_muerte,derived,raw non-empty FECDEF indicator,binary,false,false,all,none,logical,0,1,1,Raw capture completeness
+death_date_valid,fecha_muerte,derived,parsed defendable death date after placeholder and temporal checks,binary,false,false,all,none,logical,0,1,1,Usado por regla oficial
+death_date_resolution_status,fecha_muerte|fecha_diagnostico|fecha_ultimo_contacto,derived,classify death date as valid_consistent / valid_but_outside_mortality_period / placeholder_or_invalid / temporally_inconsistent / no_death_date_recorded,categorical,not_applicable,not_applicable,all,none,character,0,1,1,Base de QC y sensibilidad
+death_date_for_analysis,fecha_muerte,derived,retain only valid defendable death dates,date,missing_if_not_valid,not_applicable,all,none,date,0,1,1,Fecha usada por la regla oficial
+death_year_for_analysis,death_date_for_analysis,derived,extract year from resolved analysis death date,calendar year of death,missing_if_not_valid,not_applicable,all,none,integer,0,1,1,Año oficial para tasas
+death_proxy_fuc_candidate,estado_vital|fecha_ultimo_contacto,derived,dead without valid death date and with defendable FUC,binary,false,false,all,none,logical,0,1,1,Solo sensibilidad
+death_proxy_fuc_date,fecha_ultimo_contacto,derived,use FUC as proxy date only in sensitivity,date,missing_if_not_candidate,not_applicable,all,none,date,0,1,1,No usar para tasa oficial
+death_proxy_fuc_year,death_proxy_fuc_date,derived,extract proxy year from FUC,date,missing_if_not_candidate,not_applicable,all,none,integer,0,1,1,No usar para tasa oficial
+death_event_resolved,fecha_muerte|estado_vital,derived,official death event OR resolved analytic dead,binary,false,false,all,none,logical,0,1,1,Resume dataset final de analisis
+death_event_proxy_fuc,fecha_ultimo_contacto|estado_vital,derived,proxy death event via FUC sensitivity,binary,false,false,all,none,logical,0,1,1,Solo sensibilidad
 death_event_combined,fecha_muerte|estado_vital,derived,fecha_muerte present OR vital_status_analytic == dead,binary combined death signal,false,false,all,none,logical,0,1,1,Sensitivity-only combined audit signal
 analytic_inclusion_mortality,residence_analytic_area|death_year,derived,resident with usable death_year => yes; unresolved => unknown,yes/no/unknown,no,no,all,none,logical,0,1,1,Exclusion is analytic for mortality module
+analytic_inclusion_mortality_official,residence_analytic_area|death_year_for_analysis,derived,official_strict_iarc inclusion,yes/no/unknown,no,no,all,none,logical,0,1,1,Tasa oficial
+analytic_inclusion_mortality_sensitivity,residence_analytic_area|death_year_for_analysis|death_proxy_fuc_year,derived,sensitivity_dead_with_fuc_proxy inclusion,yes/no/unknown,no,no,all,none,logical,0,1,1,Escenario recuperador
+mortality_ruleset_applied,MASTER_MORTALITY_RESOLUTION_RULES,derived,store default analysis ruleset id,character,not_applicable,not_applicable,all,none,character,0,1,1,Trazabilidad de resolución
+mortality_ruleset_reporting,MASTER_MORTALITY_RESOLUTION_RULES,derived,store default reporting ruleset id,character,not_applicable,not_applicable,all,none,character,0,1,1,Trazabilidad de reporte
 flag_mortality_exclusion_nonresident,analytic_inclusion_mortality,derived,apply MASTER_ANALYTIC_FLAGS_RULES,binary,false,false,all,none,logical,0,0,1,QC indicator component for mortality scope
 flag_mortality_missing_death_year,death_year|vital_status_analytic,derived,apply MASTER_ANALYTIC_FLAGS_RULES,binary,false,false,all,none,logical,0,0,1,QC indicator component for mortality usability
 flag_vital_date_conflict,vital_status_analytic|fecha_muerte,derived,apply MASTER_ANALYTIC_FLAGS_RULES,binary,false,false,all,none,logical,0,0,1,QC indicator component for discordance between vital status and death date

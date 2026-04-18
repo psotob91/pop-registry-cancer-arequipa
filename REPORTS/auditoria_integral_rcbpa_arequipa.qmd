@@ -33,10 +33,17 @@ normalize_asr <- function(df, count_col) {
 preflight <- read_csv_safe("REPORTS", "preflight_checks.csv")
 qc_pop <- read_csv_safe("DATA", "DERIVED", "QC", "qc_population_denominators.csv")
 qc_rates <- read_csv_safe("DATA", "DERIVED", "QC", "qc_rates_consistency.csv")
+qc_inc_raw <- read_csv_safe("DATA", "DERIVED", "QC", "qc_incidence_raw_external_summary.csv")
+qc_inc_internal <- read_csv_safe("DATA", "DERIVED", "QC", "qc_incidence_internal_ruleset_impact.csv")
+qc_inc_crude_only <- read_csv_safe("DATA", "DERIVED", "QC", "qc_incidence_missing_population_join_cases.csv")
 qc_mortality_trace <- read_csv_safe("DATA", "DERIVED", "QC", "qc_mortality_traceability_by_year.csv")
 qc_mortality_discordance <- read_csv_safe("DATA", "DERIVED", "QC", "qc_mortality_vital_date_discordance.csv")
+qc_raw_followup <- read_csv_safe("DATA", "DERIVED", "QC", "qc_raw_followup_external_summary.csv")
+qc_internal_mortality <- read_csv_safe("DATA", "DERIVED", "QC", "qc_internal_mortality_ruleset_impact.csv")
+qc_mortality_resolution <- read_csv_safe("DATA", "DERIVED", "QC", "qc_mortality_resolution_summary.csv")
 inc_asr <- read_csv_safe("DATA", "DERIVED", "RATES", "incidence_rates_asr_period.csv") %>% normalize_asr("cases_period")
 mort_asr <- read_csv_safe("DATA", "DERIVED", "RATES", "mortality_rates_asr_period.csv") %>% normalize_asr("deaths_period")
+mort_asr_sensitivity <- read_csv_safe("DATA", "DERIVED", "RATES", "mortality_rates_sensitivity_asr_period.csv") %>% normalize_asr("deaths_period")
 mort_sensitivity <- read_csv_safe("DATA", "DERIVED", "RATES", "mortality_sensitivity_summary.csv")
 ```
 
@@ -63,6 +70,22 @@ preflight %>% select(check_type, item, status, details) %>% knitr::kable()
 qc_pop %>% knitr::kable()
 ```
 
+# Calidad raw de incidencia
+
+```{r}
+qc_inc_raw %>% knitr::kable()
+```
+
+# QC interno de incidencia
+
+```{r}
+qc_inc_internal %>% knitr::kable()
+```
+
+```{r}
+qc_inc_crude_only %>% knitr::kable()
+```
+
 # Tasas ajustadas del período
 
 ```{r}
@@ -78,7 +101,13 @@ bind_rows(
 qc_rates %>% knitr::kable()
 ```
 
-# Auditoria de mortalidad
+# Calidad raw de seguimiento
+
+```{r}
+qc_raw_followup %>% knitr::kable()
+```
+
+# QC interno de mortalidad y resolución
 
 ```{r}
 qc_mortality_trace %>% knitr::kable()
@@ -86,6 +115,21 @@ qc_mortality_trace %>% knitr::kable()
 
 ```{r}
 mort_sensitivity %>% knitr::kable()
+```
+
+```{r}
+qc_internal_mortality %>% knitr::kable()
+```
+
+```{r}
+qc_mortality_resolution %>% head(20) %>% knitr::kable()
+```
+
+```{r}
+bind_rows(
+  mort_asr %>% mutate(ruleset = "official_strict_iarc"),
+  mort_asr_sensitivity %>% mutate(ruleset = "sensitivity_dead_with_fuc_proxy")
+) %>% knitr::kable()
 ```
 
 ```{r}

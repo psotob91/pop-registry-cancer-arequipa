@@ -9,11 +9,32 @@ root <- normalizePath("..\\..\\..", winslash = "/", mustWork = TRUE)
 read_csv_safe <- function(...) readr::read_csv(fs::path(root, ...), show_col_types = FALSE)
 qc_reg <- read_csv_safe("DATA","DERIVED","QC","qc_registry_indicators.csv")
 qc_rates <- read_csv_safe("DATA","DERIVED","QC","qc_rates_consistency.csv")
+qc_inc_raw <- read_csv_safe("DATA","DERIVED","QC","qc_incidence_raw_external_summary.csv")
+qc_inc_internal <- read_csv_safe("DATA","DERIVED","QC","qc_incidence_internal_ruleset_impact.csv")
+qc_inc_missing_join <- read_csv_safe("DATA","DERIVED","QC","qc_incidence_missing_population_join_cases.csv")
 qc_mortality_trace <- read_csv_safe("DATA","DERIVED","QC","qc_mortality_traceability_by_year.csv")
+qc_raw_followup <- read_csv_safe("DATA","DERIVED","QC","qc_raw_followup_external_summary.csv")
+qc_internal_mortality <- read_csv_safe("DATA","DERIVED","QC","qc_internal_mortality_ruleset_impact.csv")
 ```
 
 ```{r}
 qc_reg %>% knitr::kable()
+```
+
+```{r}
+qc_inc_raw %>% knitr::kable()
+```
+
+```{r}
+qc_inc_internal %>% knitr::kable()
+```
+
+```{r}
+qc_inc_missing_join %>% knitr::kable()
+```
+
+```{r}
+qc_raw_followup %>% knitr::kable()
 ```
 
 ```{r}
@@ -22,4 +43,8 @@ qc_rates %>% knitr::kable()
 
 ```{r}
 qc_mortality_trace %>% knitr::kable()
+```
+
+```{r}
+qc_internal_mortality %>% knitr::kable()
 ```

@@ -10,6 +10,8 @@ read_csv_safe <- function(...) readr::read_csv(fs::path(root, ...), show_col_typ
 asr <- read_csv_safe("DATA","DERIVED","RATES","incidence_rates_asr_period.csv")
 annual <- read_csv_safe("DATA","DERIVED","RATES","incidence_rates_crude_annual.csv")
 top10 <- read_csv_safe("DATA","DERIVED","RATES","incidence_rates_top10_by_sex_period.csv")
+resolution <- read_csv_safe("DATA","DERIVED","RATES","incidence_rates_resolution_summary.csv")
+crude_only <- read_csv_safe("DATA","DERIVED","RATES","incidence_rates_crude_only_exceptions.csv")
 ```
 
 ```{r}
@@ -22,4 +24,12 @@ annual %>% knitr::kable()
 
 ```{r}
 top10 %>% knitr::kable()
+```
+
+```{r}
+resolution %>% knitr::kable()
+```
+
+```{r}
+crude_only %>% knitr::kable()
 ```
